@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pastebin</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; }
+    textarea { width: 100%; height: 150px; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    .paste { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Pastebin</h1>
+  <textarea id="pasteText" placeholder="Enter your paste..."></textarea>
+  <button onclick="submit()">Submit</button>
+  <div id="pastes"></div>
+  
+  <script>
+    function submit() {
+      const text = document.getElementById('pasteText').value;
+      fetch('/api/paste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      }).then(() => {
+        document.getElementById('pasteText').value = '';
+        loadPastes();
+      });
+    }
+    
+    function loadPastes() {
+      fetch('/api/pastes')
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('pastes').innerHTML = data.map(p => 
+            `<div class="paste"><strong>#${p.id}:</strong> ${p.text}</div>`
+          ).join('');
+        });
+    }
+    
+    loadPastes();
+  </script>
+</body>
+</html>
