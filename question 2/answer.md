@@ -79,11 +79,7 @@ git push origin main
 Remove the old generated objects, including the BuildConfig and ImageStream. This matters because deleting only the Deployment leaves the old build configuration and image available for reuse.
 
 ```bash
-oc delete deployment q2-web --ignore-not-found
-oc delete service q2-web --ignore-not-found
-oc delete route q2-web --ignore-not-found
-oc delete buildconfig q2-web --ignore-not-found
-oc delete imagestream q2-web --ignore-not-found
+oc delete deployment,service,route,buildconfig,imagestream -l app=q2-web --ignore-not-found
 ```
 
 Recreate the application from the corrected repository, wait for it to become available, then expose it:
