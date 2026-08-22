@@ -10,32 +10,6 @@ oc new-project crimson
 
 Create the application from the `main` branch and point npm at the public registry:
 
-Before creating the app, the CRC environment needs proxy for GIT and the NPM build...this is only for the lab environment. They do not survive a project delete
-
-### Git Proxy Patch
-```bash
-oc patch bc/pastebin --type=merge -p '{
-  "spec": {
-    "source": {
-      "git": {
-        "httpProxy": "http://10.10.152.62:3128",
-        "httpsProxy": "http://10.10.152.62:3128",
-        "noProxy": "localhost,127.0.0.1,.svc,.cluster.local,.apps-crc.testing,api.crc.testing,10.10.157.233,10.217.4.1"
-      }
-    }
-  }
-}'
-```
-
-### NPM Proxy Patch
-```bash
-oc set env bc/pastebin \
-  HTTP_PROXY=http://10.10.152.62:3128 \
-  HTTPS_PROXY=http://10.10.152.62:3128 \
-  NO_PROXY=localhost,127.0.0.1,.svc,.cluster.local,.apps-crc.testing,api.crc.testing,10.10.157.233,10.217.4.1 \
-  npm_config_registry=https://registry.npmjs.org/
-```
-
 ```bash
 oc new-app nodejs:18-ubi9~https://gitlab.com/hits.govind/pastebin.git#main \
   --name=pastebin \
