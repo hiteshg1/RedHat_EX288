@@ -214,3 +214,15 @@ echo '10.10.157.233 pastebin-crimson.apps-crc.testing' | sudo tee -a /etc/hosts
 ```
 
 This is local name-resolution troubleshooting; it is not part of the OpenShift deployment. Confirm the CRC ingress IP before adding the entry if the CRC instance has been recreated or its network has changed.
+
+## Reset the lab
+
+Delete the deployment pastebin
+```
+oc delete deployment pastebin
+```
+
+Delete the project
+```
+oc delete project crimson
+```
