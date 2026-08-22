@@ -108,3 +108,72 @@ oc describe deployment/q2-web
 oc describe svc/q2-web
 oc describe route/q2-web
 ```
+# Alternative Way to rebuild from local GIT clone
+### Delete the old deployment,service,route,imagestream and buildconfig
+Deletes the running Deployment, internal Service, external Route, BuildConfig, and ImageStream. 
+
+Removes the old configuration that still described port 80 and the original Git-based build setup
+```bash
+oc delete deployment/q2-web service/q2-web route/q2-web buildconfig/q2-web imagestream/q2-web
+```
+
+### Creates a fresh Docker BuildConfig that accepts files uploaded from your machine
+Tells OpenShift to build an image from local source rather than cloning the Git repository
+```bash
+oc new-build --binary --strategy=docker --name=q2-web
+```
+
+### Uploads the current directory, including its amended Dockerfile, and runs the build
+Produces a new q2-web:latest image from exactly the files in your local clone
+```bash
+oc start-build q2-web --from-dir=. --follow
+```
+
+### Creates a new Deployment and Service from that freshly built image
+OpenShift reads the image metadata, including its exposed port, to generate the workload and Service correctly
+```bash
+oc new-app --image-stream=q2-web:latest --name=q2-web
+```
+
+### Creates a public Route for the Service
+Makes the application reachable at an OpenShift hostname
+```bash
+oc expose service/q2-web
+```
+
+There are three seperate layers:
+```
+Dockerfile
+   ↓ builds
+ImageStream: q2-web:latest
+   ↓ deployed by
+Deployment
+   ↓ reached inside the cluster through
+Service
+   ↓ published outside the cluster through
+Route
+```
+
+- Your original Git-based deployment created the bottom three layers when the image declared or was configured for port 80. 
+- Rebuilding the image later updated only the image layer; it did not rewrite the already-existing Deployment and Service. That is why the port stayed at 80.
+- Deleting and recreating the resources caused oc new-app to generate a new Deployment and Service from the metadata in the rebuilt image. 
+- If your amended Dockerfile exposes and runs the application on 8080, the new objects can now use that port consistently.
+- One final point: EXPOSE 8080 documents the port for OpenShift and tooling, but the application’s startup command must also actually listen on 8080.
+
+## Validation
+```bash
+ansible@fedora-prd-rnd:~$ oc get route
+NAME     HOST/PORT                                 PATH   SERVICES   PORT       TERMINATION   WILDCARD
+q2-web   q2-web-container-build.apps-crc.testing          q2-web     8080-tcp                 None
+
+ansible@fedora-prd-rnd:~$ curl -I http://q2-web-container-build.apps-crc.testing
+HTTP/1.0 200 OK
+server: SimpleHTTP/0.6 Python/3.9.25
+date: Sat, 22 Aug 2026 18:00:58 GMT
+content-type: text/html
+content-length: 17
+last-modified: Sat, 22 Aug 2026 17:44:38 GMT
+set-cookie: 49e1b0c007dfd95cf506d2052b8f2c9c=456e14017e2c21d07b26ad7bde500d38; path=/; HttpOnly
+cache-control: private
+connection: keep-alive
+```
