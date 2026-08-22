@@ -16,6 +16,7 @@ The source repository contains an intentionally broken `package.json`. The initi
 | Application name | `pastebin` |
 | Builder image | `nodejs:18-ubi9` |
 | npm registry | `https://registry.npmjs.org/` |
+| build env | npm_config_registry |
 | Expected route | `pastebin-crimson.apps-crc.testing` |
 | Required paste text | `This is an OpenShift Demo!` |
 
