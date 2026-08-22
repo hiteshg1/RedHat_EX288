@@ -12,6 +12,18 @@ Create the application from the `main` branch and point npm at the public regist
 
 Before creating the app, the CRC environment needs proxy for GIT and the NPM build...this is only for the lab environment. They do not survive a project delete
 
+### Build the app, but it will faile
+```bash
+oc new-app nodejs:18-ubi9~https://gitlab.com/hits.govind/pastebin.git#main \
+  --name=pastebin \
+  --build-env npm_config_registry=https://registry.npmjs.org/
+```
+
+### Cancel Build Config
+```
+oc cancel-build pastebin
+```
+
 ### Git Proxy Patch
 ```bash
 oc patch bc/pastebin --type=merge -p '{
@@ -36,11 +48,13 @@ oc set env bc/pastebin \
   npm_config_registry=https://registry.npmjs.org/
 ```
 
+### Build again
 ```bash
 oc new-app nodejs:18-ubi9~https://gitlab.com/hits.govind/pastebin.git#main \
   --name=pastebin \
   --build-env npm_config_registry=https://registry.npmjs.org/
 ```
+
 
 Follow the first build:
 
