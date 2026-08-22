@@ -48,11 +48,9 @@ oc set env bc/pastebin \
   npm_config_registry=https://registry.npmjs.org/
 ```
 
-### Build again
+### Build 2 again
 ```bash
-oc new-app nodejs:18-ubi9~https://gitlab.com/hits.govind/pastebin.git#main \
-  --name=pastebin \
-  --build-env npm_config_registry=https://registry.npmjs.org/
+oc start-build pastebin
 ```
 
 
