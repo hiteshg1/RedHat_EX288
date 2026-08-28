@@ -182,10 +182,11 @@ ex288-php-mysql    template=php-app
 
 ### Step 11: Deploy Application from Template
 ```bash
-oc new-app ex288-php-app-template \
+oc new-app --template=ex288-php-mysql \
   -p NAME=php-app \
   -p HELLO_MESSAGE=Namaste \
-  -p HELLO_AUDIENCE=Architects
+  -p HELLO_AUDIENCE=Architects \
+  -p APPLICATION_DOMAIN=php-app-indy.apps.ocp4.example.com
 ```
 
 ```bash

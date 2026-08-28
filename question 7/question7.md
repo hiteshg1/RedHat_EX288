@@ -148,7 +148,7 @@ parameters:
     displayName: Git Repository URL
     description: The URL of the repository with your application source code
     required: false
-    value: https://git.ocp4.example.com/developer/php-greeting-app.git
+    value: https://gitlab.com/hits.govind/php-greeting-app.git 
   - name: SOURCE_REPOSITORY_REF
     displayName: Git Reference
     description: Set this to a branch name, tag or other ref of your repository
