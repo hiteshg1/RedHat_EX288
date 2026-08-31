@@ -1,17 +1,29 @@
-# Question 7: Working with OpenShift Templates
+# Question 7: Deploy an Application from an OpenShift Template
 
 ## Question
+A public PHP greeting application is available at:
 
-Using the PHP+MySQL template from `fileserver-default.apps.ocp4.example.com/files`, deploy an application that meets the following requirements:
+https://gitlab.com/hits.govind/php-greeting-app.git
 
-- The application is part of a project named: **indy**
-- The template is named: **ex288-php-mysql**
-- The template has the label: **template: php-app**
-- The application displays a customized greeting at `http://php-app-indy.apps.ocp4.example.com`
-- The greeting displays: **"Namaste Architects!"** (instead of the default "Bonjour Engineers!")
-- All required parameters in the template must be properly set
-- The application successfully deploys from the template
+A template file named php-app.yaml is available from a fileserver at http://fileserver-indy.apps-crc.testing/files/php-app.yaml. 
 
+Create an application that meets these requirements:
+
+Use project indy.
+
+Create a template named ex288-php-mysql.
+
+Label the template with template=php-app.
+
+Deploy an application named php-app from the template.
+
+Configure the greeting to display Namaste Architects!.
+
+Configure the route host as php-app-indy.<cluster-apps-domain>.
+
+Ensure all values needed to process and deploy the template are supplied.
+
+Verify that the build completes, the application pods run, and the route displays the required greeting.
 ---
 
 ## Environment Setup
