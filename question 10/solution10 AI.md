@@ -21,15 +21,41 @@ Then provision the lab project:
 
 ```bash
 oc new-project cicd 2>/dev/null || true
+oc create serviceaccount pipeline -n cicd 2>/dev/null || true
 oc adm policy add-role-to-user edit developer -n cicd
 oc policy add-role-to-user system:image-builder -z pipeline -n cicd
 oc policy add-role-to-user edit -z pipeline -n cicd
 oc get serviceaccount pipeline -n cicd
+oc auth can-i use securitycontextconstraints/pipelines-scc \
+  --as=system:serviceaccount:cicd:pipeline
 ```
 
-## 1. Create the public source repository
+The final command must return `yes`. If it returns `no`, an administrator must grant the SCC and repeat the check:
 
-Create `https://gitlab.com/hits.govind/pipeline-app.git` with default branch `main`. Clone it locally and add these files.
+```bash
+oc adm policy add-scc-to-user pipelines-scc -z pipeline -n cicd
+```
+
+## 1. Create the public source repository: mandatory
+
+This step must complete before creating any Pipeline resources.
+
+1. In GitLab, create a **blank** project:
+
+   - Namespace: `hits.govind`
+   - Project name: `pipeline-app`
+   - Visibility: **Public**
+   - Do **not** initialize the repository with a README, `.gitignore`, or licence.
+
+2. Create the local repository and set its branch explicitly to `main`:
+
+```bash
+mkdir -p ~/gitlab/pipeline-app
+cd ~/gitlab/pipeline-app
+git init -b main
+```
+
+3. Create the following two files.
 
 `Containerfile`:
 
@@ -47,16 +73,42 @@ CMD ["python3", "-m", "http.server", "8080"]
 Hello, Pipelines!
 ```
 
-Commit and push to `main`.
+4. Commit and push the files:
 
-## 2. Log in as the learner
+```bash
+git add Containerfile index.html
+git commit -m "Add pipeline application"
+git remote add origin https://gitlab.com/hits.govind/pipeline-app.git
+git push -u origin main
+```
+
+5. Confirm the exact branch is available before continuing:
+
+```bash
+git ls-remote https://gitlab.com/hits.govind/pipeline-app.git refs/heads/main
+```
+
+The command must print a commit hash and `refs/heads/main`. If it does not, do not create a PipelineRun.
+
+## 2. Optional reset before a new practice attempt
+
+If you want a completely clean OpenShift attempt, delete the existing project as an administrator and wait for it to disappear:
+
+```bash
+oc delete project cicd
+oc get project cicd
+```
+
+When the second command returns `NotFound`, restart at **Administrator stop/go check**. Do not delete the GitLab repository; it is the reusable source input for every practice run.
+
+## 3. Log in as the learner
 
 ```bash
 oc login -u developer -p developer https://api.crc.testing:6443
 oc project cicd
 ```
 
-## 3. Create the Pipeline
+## 4. Create the Pipeline
 
 Save as `pipeline.yaml`:
 
@@ -149,7 +201,7 @@ spec:
 oc apply -f pipeline.yaml
 ```
 
-## 4. Start a manual run
+## 5. Start a manual run
 
 Save as `manual-run.yaml`:
 
@@ -180,7 +232,7 @@ oc get pods,route
 curl --noproxy '*' http://pipeline-app-cicd.apps-crc.testing
 ```
 
-## 5. Create trigger RBAC
+## 6. Create trigger RBAC
 
 Save as `trigger-rbac.yaml`:
 
@@ -228,7 +280,7 @@ roleRef:
 oc apply -f trigger-rbac.yaml
 ```
 
-## 6. Create the trigger resources
+## 7. Create the trigger resources
 
 Save as `triggers.yaml`:
 
@@ -296,7 +348,7 @@ oc expose service el-pipeline-app-listener
 EL_ROUTE=$(oc get route el-pipeline-app-listener -o jsonpath='{.spec.host}')
 ```
 
-## 7. Repeatable local trigger test
+## 8. Repeatable local trigger test
 
 Use this on the Fedora host to validate Tekton triggers in the private CRC lab:
 
@@ -309,7 +361,7 @@ oc get pipelinerun -w
 
 For a real GitLab webhook, first ensure the GitLab server can reach the EventListener route. A private CRC route is normally not reachable from GitLab.com.
 
-## 8. Practice again
+## 9. Practice again
 
 Each manual or trigger-created run receives a new PVC, so runs do not overwrite one another. For a clean application reset:
 
