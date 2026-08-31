@@ -1,8 +1,35 @@
 # Question 10 solution: Repeatable CRC Pipeline Lab
 
-## 1. One-time source repository preparation
+This solution uses `oc` only. The optional `tkn` client is not required.
 
-Create a public repository at `https://gitlab.com/hits.govind/pipeline-app.git` (or replace this URL consistently below with a Git server reachable both by the build pod and the webhook sender). Ensure its default branch is `main` and add:
+## 0. Administrator stop/go check
+
+Log in as `kubeadmin` or `admin` and run:
+
+```bash
+oc get csv -n openshift-operators | grep -i pipelines
+oc get tektonconfig
+oc get pods -n openshift-pipelines
+oc get task -n openshift-pipelines
+oc get task -A
+oc get stepaction -n openshift-pipelines
+```
+
+Do not continue until the `openshift-pipelines` namespace contains `git-clone`, `buildah`, and `openshift-client`. An empty namespace means the Operator installation/configuration must be repaired by an administrator.
+
+Then provision the lab project:
+
+```bash
+oc new-project cicd 2>/dev/null || true
+oc adm policy add-role-to-user edit developer -n cicd
+oc policy add-role-to-user system:image-builder -z pipeline -n cicd
+oc policy add-role-to-user edit -z pipeline -n cicd
+oc get serviceaccount pipeline -n cicd
+```
+
+## 1. Create the public source repository
+
+Create `https://gitlab.com/hits.govind/pipeline-app.git` with default branch `main`. Clone it locally and add these files.
 
 `Containerfile`:
 
@@ -20,7 +47,9 @@ CMD ["python3", "-m", "http.server", "8080"]
 Hello, Pipelines!
 ```
 
-## 2. Log in and select the project
+Commit and push to `main`.
+
+## 2. Log in as the learner
 
 ```bash
 oc login -u developer -p developer https://api.crc.testing:6443
@@ -29,13 +58,7 @@ oc project cicd
 
 ## 3. Create the Pipeline
 
-Save the following as `pipeline.yaml` and apply it. The task names and parameter names must be checked against the installed Pipelines version before use:
-
-```bash
-tkn task describe git-clone -n openshift-pipelines
-tkn task describe buildah -n openshift-pipelines
-tkn task describe openshift-client -n openshift-pipelines
-```
+Save as `pipeline.yaml`:
 
 ```yaml
 apiVersion: tekton.dev/v1
@@ -126,7 +149,7 @@ spec:
 oc apply -f pipeline.yaml
 ```
 
-## 4. Run it manually
+## 4. Start a manual run
 
 Save as `manual-run.yaml`:
 
@@ -152,17 +175,12 @@ spec:
 
 ```bash
 oc create -f manual-run.yaml
-tkn pipelinerun logs -f --last
-```
-
-Verify:
-
-```bash
-oc get pipelinerun,pods,route
+oc get pipelinerun -w
+oc get pods,route
 curl --noproxy '*' http://pipeline-app-cicd.apps-crc.testing
 ```
 
-## 5. Configure Trigger RBAC
+## 5. Create trigger RBAC
 
 Save as `trigger-rbac.yaml`:
 
@@ -210,7 +228,7 @@ roleRef:
 oc apply -f trigger-rbac.yaml
 ```
 
-## 6. Create the trigger objects
+## 6. Create the trigger resources
 
 Save as `triggers.yaml`:
 
@@ -276,12 +294,11 @@ spec:
 oc apply -f triggers.yaml
 oc expose service el-pipeline-app-listener
 EL_ROUTE=$(oc get route el-pipeline-app-listener -o jsonpath='{.spec.host}')
-echo "$EL_ROUTE"
 ```
 
 ## 7. Repeatable local trigger test
 
-This works in the private CRC lab and validates the TriggerBinding, TriggerTemplate, EventListener, and PipelineRun creation:
+Use this on the Fedora host to validate Tekton triggers in the private CRC lab:
 
 ```bash
 curl --noproxy '*' -X POST "http://${EL_ROUTE}" \
@@ -290,17 +307,13 @@ curl --noproxy '*' -X POST "http://${EL_ROUTE}" \
 oc get pipelinerun -w
 ```
 
-## 8. GitLab webhook (only after reachability is proven)
+For a real GitLab webhook, first ensure the GitLab server can reach the EventListener route. A private CRC route is normally not reachable from GitLab.com.
 
-Before creating a GitLab.com webhook, verify that GitLab can reach `http://${EL_ROUTE}`. A private CRC address normally fails this test. If the route is made reachable through approved infrastructure, configure the GitLab project webhook with that URL and enable **Push events**.
+## 8. Practice again
 
-## 9. Repeat the lab
-
-To practice again, push a change or rerun the local trigger test. Each run receives its own PVC, so concurrent runs do not overwrite each other. To remove only the generated application and runs:
+Each manual or trigger-created run receives a new PVC, so runs do not overwrite one another. For a clean application reset:
 
 ```bash
 oc delete pipelinerun --all
 oc delete deployment,service,route pipeline-app --ignore-not-found
 ```
-
-Keep the Pipeline and trigger objects for the next practice run.
