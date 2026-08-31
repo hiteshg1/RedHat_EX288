@@ -60,17 +60,21 @@ git init -b main
 `Containerfile`:
 
 ```dockerfile
+cat > Containerfile <<'EOF'
 FROM registry.access.redhat.com/ubi9/python-311:latest
 WORKDIR /opt/app-root/src
 COPY --chown=1001:0 index.html ./index.html
 EXPOSE 8080
 CMD ["python3", "-m", "http.server", "8080"]
+EOF
 ```
 
 `index.html`:
 
-```html
+```bash
+cat > index.html <<'EOF'
 Hello, Pipelines!
+EOF
 ```
 
 4. Commit and push the files:
@@ -128,7 +132,7 @@ oc project cicd
 
 ## 4. Create the Pipeline
 
-Save as `pipeline.yaml`:
+Create file `pipeline.yaml`:
 
 ```yaml
 apiVersion: tekton.dev/v1
@@ -221,7 +225,7 @@ oc apply -f pipeline.yaml
 
 ## 5. Start a manual run
 
-Save as `manual-run.yaml`:
+Create file `manual-run.yaml`:
 
 ```yaml
 apiVersion: tekton.dev/v1
@@ -254,7 +258,7 @@ curl --noproxy '*' http://pipeline-app-cicd.apps-crc.testing
 
 The developer prepares this file but must **not** apply it. The following commands in this section are run by `admin` or `kubeadmin` only.
 
-Save as `trigger-rbac.yaml`:
+Create file `trigger-rbac.yaml`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -330,7 +334,7 @@ oc whoami
 
 ## 7. Create the trigger resources as developer
 
-Save as `triggers.yaml`:
+Create file  `triggers.yaml`:
 
 ```yaml
 apiVersion: v1
@@ -416,7 +420,7 @@ Use this on the Fedora host to validate Tekton triggers in the private CRC lab:
 curl --noproxy '*' -X POST "http://${EL_ROUTE}" \
   -H 'Content-Type: application/json' \
   -d '{"checkout_sha":"main","project":{"git_http_url":"https://gitlab.com/hits.govind/pipeline-app.git"}}'
-  
+
 oc get pipelinerun -w
 ```
 

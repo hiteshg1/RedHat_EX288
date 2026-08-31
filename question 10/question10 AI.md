@@ -111,11 +111,13 @@ Create these files in the repository root.
 `Containerfile`:
 
 ```dockerfile
+cat > Containerfile <<'EOF'
 FROM registry.access.redhat.com/ubi9/python-311:latest
 WORKDIR /opt/app-root/src
 COPY --chown=1001:0 index.html ./index.html
 EXPOSE 8080
 CMD ["python3", "-m", "http.server", "8080"]
+EOF
 ```
 
 `index.html`:
