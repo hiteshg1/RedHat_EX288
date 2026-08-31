@@ -101,24 +101,6 @@ oc get project cicd
 
 When the second command returns `NotFound`, restart at **Administrator stop/go check**. Do not delete the GitLab repository; it is the reusable source input for every practice run.
 
-After the administrator preparation, the learner must recreate the Pipeline **before** creating any PipelineRun:
-
-```bash
-oc login -u developer -p developer https://api.crc.testing:6443
-oc project cicd
-oc apply -f pipeline.yaml
-oc get pipeline build-and-deploy
-```
-
-Only after `oc get pipeline build-and-deploy` succeeds may the learner run `oc create -f manual-run.yaml`.
-
-If retaining the project instead of deleting it, remove old runs and their claims only when `cicd` is dedicated to this lab:
-
-```bash
-oc delete pipelinerun --all
-oc delete pvc --all
-```
-
 ## 3. Log in as the learner
 
 ```bash
@@ -250,13 +232,16 @@ oc get pods,route
 curl --noproxy '*' http://pipeline-app-cicd.apps-crc.testing
 ```
 
-## 6. Create trigger RBAC: administrator action
-
-The developer prepares this file but must **not** apply it. The following commands in this section are run by `admin` or `kubeadmin` only.
+## 6. Create trigger RBAC
 
 Save as `trigger-rbac.yaml`:
 
 ```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pipeline-trigger-sa
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -289,55 +274,17 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: tekton-triggers-eventlistener-roles
----
-# ClusterInterceptors are cluster-scoped. This binding is therefore an
-# administrator-only resource.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: cicd-pipeline-trigger-listener-cluster
-subjects:
-  - kind: ServiceAccount
-    name: pipeline-trigger-sa
-    namespace: cicd
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: tekton-triggers-eventlistener-clusterroles
 ```
 
 ```bash
-# Administrator only: first confirm this is not the developer session.
-oc whoami
-# Expected: admin or kubeadmin
-oc project cicd
-oc apply -f trigger-rbac.yaml -n cicd
-oc get role pipeline-trigger-run-creator -n cicd
-oc get rolebinding pipeline-trigger-run-creator pipeline-trigger-listener -n cicd
-oc get clusterrolebinding cicd-pipeline-trigger-listener-cluster
+oc apply -f trigger-rbac.yaml
 ```
 
-Only an administrator applies this file. The EventListener ServiceAccount is deliberately not in this file: the developer creates it in the next step.
-
-After this succeeds, log in as `developer`, confirm the identity, and continue:
-
-```bash
-oc login -u developer -p developer https://api.crc.testing:6443
-oc project cicd
-oc whoami
-# Expected: developer
-```
-
-## 7. Create the trigger resources as developer
+## 7. Create the trigger resources
 
 Save as `triggers.yaml`:
 
 ```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: pipeline-trigger-sa
----
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
@@ -361,7 +308,7 @@ spec:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
       metadata:
-        generateName: build-and-deploy-webhook-
+        generateName: build-and-deploy-trigger-
       spec:
         pipelineRef:
           name: build-and-deploy
@@ -396,15 +343,8 @@ spec:
 ```
 
 ```bash
-# Developer only: the administrator must have applied trigger-rbac.yaml first.
-oc whoami
-# Expected: developer
 oc apply -f triggers.yaml
-oc get serviceaccount pipeline-trigger-sa
-oc get triggerbinding,triggertemplate,eventlistener
-oc get pods -l eventlistener=pipeline-app-listener -w
-# Continue only when the pod reports 1/1 Running. Press Ctrl+C to stop watching.
-oc expose service el-pipeline-app-listener --dry-run=client -o yaml | oc apply -f -
+oc expose service el-pipeline-app-listener
 EL_ROUTE=$(oc get route el-pipeline-app-listener -o jsonpath='{.spec.host}')
 ```
 
@@ -416,11 +356,8 @@ Use this on the Fedora host to validate Tekton triggers in the private CRC lab:
 curl --noproxy '*' -X POST "http://${EL_ROUTE}" \
   -H 'Content-Type: application/json' \
   -d '{"checkout_sha":"main","project":{"git_http_url":"https://gitlab.com/hits.govind/pipeline-app.git"}}'
-  
 oc get pipelinerun -w
 ```
-
-The EventListener returns `202 Accepted` for a valid payload. A new PipelineRun whose name begins with `build-and-deploy-webhook-` should then appear.
 
 For a real GitLab webhook, first ensure the GitLab server can reach the EventListener route. A private CRC route is normally not reachable from GitLab.com.
 

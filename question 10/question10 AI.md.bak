@@ -38,14 +38,14 @@ If those Tasks do not exist, stop and repair the Pipelines installation before c
 Create the project and give the student access:
 
 ```bash
-oc new-project cicd
+oc new-project cicd 2>/dev/null || true
 oc adm policy add-role-to-user edit developer -n cicd
 ```
 
 Create the service account that will run Pipeline tasks and give it the lab permissions needed to build, push, and deploy:
 
 ```bash
-oc create serviceaccount pipeline -n cicd
+oc create serviceaccount pipeline -n cicd 2>/dev/null || true
 oc policy add-role-to-user system:image-builder -z pipeline -n cicd
 oc policy add-role-to-user edit -z pipeline -n cicd
 ```
@@ -68,16 +68,6 @@ oc adm policy add-scc-to-user pipelines-scc -z pipeline -n cicd
 This CRC cluster is private. A GitLab.com webhook cannot reach a private CRC route unless approved public ingress or a tunnel is available.
 
 For the required automated-trigger practice, the student must at minimum send a GitLab-style HTTP payload from the Fedora host to the EventListener route. A real GitLab webhook is an optional extension only after external reachability is confirmed.
-
-### 4. Create the trigger RBAC after the student prepares it
-
-The student must not create Roles or RoleBindings. Those resources grant permissions and require an administrator. After the student prepares `trigger-rbac.yaml`, the administrator must create the Role and RoleBindings in `cicd`:
-
-```bash
-oc apply -f trigger-rbac.yaml -n cicd
-```
-
-The administrator must verify the active user is `admin` or `kubeadmin` before applying this file. The developer must not run this command.
 
 ## Student instructions
 
@@ -192,17 +182,13 @@ Hello, Pipelines!
 
 Create the following Tekton Triggers resources in `cicd`:
 
+- A ServiceAccount for the EventListener.
+- RBAC that allows that service account to create PipelineRuns.
 - A `TriggerBinding` that reads `project.git_http_url` and `checkout_sha` from a GitLab-style push payload.
 - A `TriggerTemplate` that creates a new `build-and-deploy` PipelineRun.
 - An `EventListener` that connects the binding and template.
 
 Each triggered PipelineRun must use `pipeline` as its task service account and create its own `shared-data` PVC through a `volumeClaimTemplate`.
-
-Create `triggers.yaml` as the `developer` user. It must contain the EventListener ServiceAccount, TriggerBinding, TriggerTemplate, and EventListener. Do not apply it until the administrator has created the Role and RoleBindings from `trigger-rbac.yaml`.
-
-Prepare `trigger-rbac.yaml`, containing the Role and RoleBindings that allow the EventListener ServiceAccount to create PipelineRuns, plus the required ClusterRoleBinding for Tekton ClusterInterceptors. Give that file to the administrator to apply before applying `triggers.yaml`.
-
-After the administrator applies the RBAC file, wait until the EventListener pod is ready before exposing its Service or sending a trigger request.
 
 Expose the EventListener Service with a Route. From the Fedora host, send a GitLab-style HTTP POST to that route and verify a new PipelineRun is created.
 
