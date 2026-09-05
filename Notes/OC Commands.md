@@ -1,7 +1,7 @@
 # OC Commands Reference
 ---
 
-## Logging in OpenShift Cluster
+## 1. Logging in OpenShift Cluster
 ```bash
 # Shows API for logging in via CLI
 oc whoami --show-server
@@ -14,7 +14,7 @@ oc login -u developer -p developer https://api.ocp4.example.com:6443
 oc login -u developer -p $(oc whoami -t) https://api.ocp4.example.com:6443
 ```
 
-## Log in via Skopeo
+## 2. Log in via Skopeo
 ```bash
 skopeo login --username myuser --password mypass <registry>
 skopeo inspect docker://<registry:port>/user/app:tag
@@ -24,14 +24,14 @@ skopeo login registry.ocp4.example.com:8443 -u developer -p developer
 skopeo inspect docker://registry.ocp4.example.com:8443/redhattraining/hello-world-nginx
 ```
 ---
-## Creating, Viewing and Deleting Projects
+## 3. Creating, Viewing and Deleting Projects
 ```bash 
 oc new-project <project_name>
 oc get projects
 oc delete project <project_name>
 ```
 
-## Creating a Secret for a Docker Registry
+## 4. Creating a Secret for a Docker Registry
 ### Syntax of command and steps
 
 ```bash
@@ -64,7 +64,7 @@ docker-registry-credentials \
 oc secrets link default docker-registry-credentials --for=pull
 ```
 ---
-## Viewing Events
+## 5. Viewing Events
 ```bash
 # Stream/Watch events in real time
 oc get events -w
@@ -76,7 +76,7 @@ oc get events --field-selector type=Warning
 oc get events --sort-by='.metadata.creationTimestamp'
 ```
 ---
-## Importing an Image Stream & Deploying the app
+## 6. Importing an Image Stream & Deploying the app
 ```bash
 # Step 1: Create/select the project
 oc new-project <project-name>
@@ -112,6 +112,79 @@ oc get route
 curl http://hello-images-streams-app.apps.ocp4.example.com
 ```
 ---
+## 7. Triggers
+```bash
+# add/remove a GitLab webhook to a build configuration
+oc set triggers bc/name --from-gitlab
+oc set triggers bc/name --from-gitlab --remove
+
+# To retrieve a webhook URL
+oc describe bc/name
+```
+---
+## 8. S2I
+### What is S2I?
+Instead of writing a Containerfile, S2I uses a builder image that already knows how to build and run a particular type of application. Examples of builder images include Node.js, Python, PHP and httpd-24.
+```bash
+Application Source Code
+        +
+S2I Builder Image
+        ↓
+      Build
+        ↓
+Runnable Application Image
+        ↓
+Deployment → Pod
+```
+``` bash
+# How to identify an S2I builder
+skopeo inspect docker://<registry>/<image>:<tag> | grep -i s2i
+podman inspect <image>
+
+# Create S2I application
+oc new-app --name=<app> <builder-image>~<git-repo>
+
+# Private Git repository
+oc create secret generic <secret> --from-literal=username=<user> --from-literal=password=<password>
+oc new-app --name=<app> --source-secret=<secret> <builder-image>~<git-repo>
+
+# Example
+oc new-app registry.example.com/ubi9/httpd-24~https://git.example.com/user/app.git
+```
+---
+
+## 9. Deleting an app
+```bash
+# Deleting an app with label e.g. bonjour
+oc delete all -l app=bonjour
+```
+
+## Pipeline Strategies
+
+| Strategy | Description | Best For... |
+|----------|-------------|--------------|
+| **Source-to-Image (S2I)** | Injects raw application code into a pre-configured builder image (e.g., Python, Java). OpenShift automatically handles dependencies and assembly. | Developers who want to focus purely on code without managing Dockerfiles. |
+| **Docker Build** | Mimics a standard `docker build` command. It expects a raw `Dockerfile` in the root of your source repository. | Legacy applications or teams that require strict control over image layers. |
+| **Custom** | Allows you to supply your own custom builder image that defines specific build logic or non-standard artifacts (like RPMs). | Complex, highly customized build requirements. |
+| **Pipeline** | *Note: Deprecated in newer versions in favor of OpenShift Pipelines (Tekton).* Leverages a Jenkins pipeline workflow defined in a `Jenkinsfile`. | Advanced multi-stage CI/CD orchestration. |
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Chapter 3 Lab: Building and Publishing Container Images
 ### Outcomes
 - Build a container image locally.
@@ -172,14 +245,6 @@ curl http://custom-server-images-review.ocp4.example.com
 ```
 ---
 
-## Pipeline Strategies
-
-| Strategy | Description | Best For... |
-|----------|-------------|--------------|
-| **Source-to-Image (S2I)** | Injects raw application code into a pre-configured builder image (e.g., Python, Java). OpenShift automatically handles dependencies and assembly. | Developers who want to focus purely on code without managing Dockerfiles. |
-| **Docker Build** | Mimics a standard `docker build` command. It expects a raw `Dockerfile` in the root of your source repository. | Legacy applications or teams that require strict control over image layers. |
-| **Custom** | Allows you to supply your own custom builder image that defines specific build logic or non-standard artifacts (like RPMs). | Complex, highly customized build requirements. |
-| **Pipeline** | *Note: Deprecated in newer versions in favor of OpenShift Pipelines (Tekton).* Leverages a Jenkins pipeline workflow defined in a `Jenkinsfile`. | Advanced multi-stage CI/CD orchestration. |
 
 ## Guided Exercise 4.1: Managing Application Builds
 Create an application build. Build the vertx-site application from source code in Git.
@@ -228,5 +293,49 @@ oc get route
 curl vertx-site-builds-applications.apps.ocp4.example.com
 
 # If you need to fix the app and re-save the changes to GIT
+git commit -am "Modify the application version"
+git push
+oc start-build --follow vertx-site
+```
+## Guided Exercise 4.2: Triggering Builds
+### Outcomes
+- Deploy an application by using a builder image and a source code.
+- Trigger a new build of the application when the builder image changes.
 
+Lab Details:
+| Key         | Value |
+| ---         | --- |
+| Gitlab Repo | https://git.ocp4.example.com/developer/builds-triggers|
+| Gitlab Username | developer |
+| Gitlab Password | d3v3lop3r |
+| Gitlab secret   | gitlab    |
+| Image Repo      | registry.ocp4.example.com:8443/ubi8/httpd-24 |
+
+
+```bash
+# Create gitlab secret
+oc create secret generic gitlab --from-literal=username=developer --from-literal=password=d3v3lop3r
+
+# Deploy an application from the GitLab repository builds-triggers. 
+# Set builds-triggers as the application name, and use ubi8/httpd-24 as the base image.
+IMAGE=registry.ocp4.example.com:8443
+GIT_REPO=https://git.ocp4.example.com/developer/builds-triggers
+
+oc new-app --name builds-triggers --source-secret gitlab $IMAGE~$GIT_REPO
+
+# Monitor Build and confirm its using the UBI8 httpd-24 image
+oc get pods -w
+oc rsh svc/builds-triggers cat /etc/redhat-release
+
+# Set a build trigger
+oc set triggers bc/builds-triggers
+
+# Set the Image Stream to use UBI9 image
+oc tag registry.ocp4.example.com:8443/ubi9/httpd-24:latest httpd-24:latest
+
+# Your should notice a 2nd build triggered. When you rsh into the container, it should use a UBI9 image
+oc get builds
+
+# Confirming Triggers have been set, look for triggers
+oc get bc/builds-triggers -o yaml | grep trigger
 ```
