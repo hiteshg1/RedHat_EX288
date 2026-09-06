@@ -156,7 +156,7 @@ oc new-app registry.example.com/ubi9/httpd-24~https://git.example.com/user/app.g
 ## 9. Deleting an app
 ```bash
 # Deleting an app with label e.g. bonjour
-oc delete all -l app=bonjour
+oc delete all -l app=bonjourd
 ```
 
 ## Pipeline Strategies
@@ -184,6 +184,7 @@ oc delete all -l app=bonjour
 
 
 
+<br>
 
 ## Chapter 3 Lab: Building and Publishing Container Images
 ### Outcomes
@@ -244,7 +245,7 @@ oc get route
 curl http://custom-server-images-review.ocp4.example.com
 ```
 ---
-
+<br>
 
 ## Guided Exercise 4.1: Managing Application Builds
 Create an application build. Build the vertx-site application from source code in Git.
@@ -297,6 +298,9 @@ git commit -am "Modify the application version"
 git push
 oc start-build --follow vertx-site
 ```
+---
+<br>
+
 ## Guided Exercise 4.2: Triggering Builds
 ### Outcomes
 - Deploy an application by using a builder image and a source code.
@@ -338,4 +342,75 @@ oc get builds
 
 # Confirming Triggers have been set, look for triggers
 oc get bc/builds-triggers -o yaml | grep trigger
+```
+---
+<br>
+
+## Chapter 4 Lab: Managing Red Hat OpenShift Builds
+### Outcomes
+- Create, start, and rebuild application builds in Red Hat OpenShift.
+- Debug and fix failed OpenShift builds.
+
+### Instructions
+
+Your task is to deploy the expense-service application to Red Hat OpenShift. Because your OpenShift cluster does not contain an S2I base image that is compatible with the application, your colleague provided you with the source code for the application and a Dockerfile file.
+
+Use the following information to deploy the application into the OpenShift cluster.
+| Description	| Value |
+| ---	| --- |
+| Application name	| expense-service |
+| Source code location	| https://git.ocp4.example.com/developer/DO288-apps |
+| Source code directory	| apps/builds-review/expense-service |
+| Build strategy	| Docker |
+| Application URL	| http://expense-service-builds-review.apps.ocp4.example.com |
+| GitLab username	| developer |
+| GitLab password	| d3v3lop3r |
+
+### Dockerfile
+```bash
+Dockerfile
+FROM registry.ocp4.example.com:8443/redhattraining/ocpdev-ubi8-openjdk-17-base:1.16
+
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+COPY src .
+RUN mvn clean package
+
+CMD ["java", "-jar", "target/expense-service-1.0.0-SNAPSHOT-runner.jar"]
+```
+### Step by Step Guide
+```bash
+# Log in to OpenShift.
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project builds-review
+
+# Create the application in OpenShift, which includes creating a BuildConfig. The app has a bug.
+oc new-app --name expense-service --strategy Docker \
+--context-dir apps/builds-review/expense-service \
+https://git.ocp4.example.com/developer/DO288-apps
+
+oc logs deploy/expense-service
+# Error: Unable to access jarfile target/expense-service-1.0.0-SNAPSHOT-runner.jar
+
+# You can launch a debug pod and verify if target/expense-service-1.0.0-SNAPSHOT-runner.jar exist
+oc debug deploy/expense-service
+$ ls target/
+
+# There is no expense-service-1.0.0-SNAPSHOT-runner.jar file in the target folder. Maven will need to recompile the application
+# mvn clean package, builds the JAR/WAR file and leaves it exclusively inside your local project's /target folder.
+mvn clean package
+
+# Edit the Dockerfile, amend COPY src . to COPY src src and push back to git
+git commit -am "Fixed COPY src src in Dockerfile"
+git push
+
+# Re-depoly the application
+oc start-build bc/expense-service --follow
+
+# Validation
+oc get pods
+oc expose svc/expense-service
+oc get route
+curl -s expense-service-builds-review.apps.ocp4.example.com/expenses | jq
 ```
