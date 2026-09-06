@@ -159,6 +159,85 @@ oc new-app registry.example.com/ubi9/httpd-24~https://git.example.com/user/app.g
 oc delete all -l app=bonjourd
 ```
 
+## 10. OC Explain
+```bash
+# oc explain only explains how API resources work. To list the api-resouces,
+oc api-resources
+
+# Example, secrets is an api resource
+oc explain secrets
+
+```
+
+## 11. OC Rollout
+The oc rollout command provides the cancel, pause, undo, retry, and more options for your deployments.
+```bash
+oc rollout status deployment example-deployment
+oc rollout undo deployment example-deployment
+oc rollout pause deployment example-deployment
+oc rollout resume deployment example-deployment
+oc rollout --help
+```
+
+## 11. OC Scale
+The oc scale command scales the number of replicas for a given deployment
+```bash
+oc scale deployment example-deployment --replicas=3
+oc get pods
+```
+
+## 12. Secrets and Config Maps
+Depending on the sensitivity of the data, you can use the configuration map (ConfigMap) or secret (Secret) OpenShift objects to externalize the data.
+
+Use secrets to store sensitive information, such as passwords, keys, and tokens.
+```bash
+# Similarly to secrets, you can create configuration maps by using the oc create command:
+oc create configmap example-cm --from-literal key1=value1 --from-literal key2=value2
+
+# You can also create configuration maps from a file 
+oc create configmap example-cm --from-file=redis.conf
+
+# Developers might also rename the key, such as:
+oc create configmap example-cm \
+--from-file=primary=/etc/redis/redis.conf \
+--from-file=replica=replica-redis.conf
+
+# To view details of a resource, use the oc get command. The -o yaml parameter displays the resource in the YAML language.
+oc get secret mysecret -o yaml
+
+# To edit a resource, use the oc edit command:
+oc edit configmap my-cm
+
+# Patching a resource refers to updating the resource by applying a set of changes rather than interactively. 
+oc patch configmap/my-cm --patch '{"data":{"key1":"newvalue1"}}'
+
+# Base64 encoding / decoding
+echo -n 'hunter3' | base64
+echo -n 'aHVudGVyMw==' | base64 --decode
+
+# Use the oc extract command to extract the contents of a configuration map or a secret to a directory
+oc extract secret/my-secret --to=/tmp/secret
+
+# Injecting Data into Pods
+oc set env deployment my-deployment --from configmap/my-cm
+```
+
+## 13. Service Accounts
+Service accounts provide identity for applications. This means that administrators can bind roles for role-based access control (RBAC), secrets, security context constraints (SCCs), and other objects to service accounts.
+
+Developers then associate service accounts with pods. 
+```bash
+# Create a service account by using the oc create command:
+oc create serviceaccount my-sa
+
+# Assign a custom service account to a deployment or a pod by using the oc set serviceaccount command:
+oc set serviceaccount deployment nginx-deployment my-sa
+
+
+```
+
+
+
 ## Pipeline Strategies
 
 | Strategy | Description | Best For... |
@@ -413,4 +492,84 @@ oc get pods
 oc expose svc/expense-service
 oc get route
 curl -s expense-service-builds-review.apps.ocp4.example.com/expenses | jq
+```
+---
+<br>
+
+## Exersise 5.1:  Selecting the Appropriate Deployment Strategy
+### Outcomes
+- Observe the behavior of both the rolling and recreate deployment strategies.
+
+### Application Spec
+| Name | Value |
+| --- | --- |
+| Application Name      | users-db |
+| MYSQL_USER: developer | Value |
+| MYSQL_PASSWORD        | redhat |
+| MYSQL_DATABASE        | users |
+| Repository URL        | https://git.ocp4.example.com/developer/DO288-apps |
+| Repository context    | apps/deployments-strategy/users-db |
+
+```bash
+# Use the oc new-app command with the -o yaml option to create a manifest for the app
+oc new-app --name users-db \
+-e MYSQL_USER=developer \
+-e MYSQL_PASSWORD=redhat \
+-e MYSQL_DATABASE=users \
+https://git.ocp4.example.com/developer/DO288-apps \
+--context-dir=apps/deployments-strategy/users-db \
+-o yaml > application.yaml
+
+# Create the application in the cluster by running the oc apply command with the -f option to provide the application.yaml file.
+oc apply -f application.yaml
+
+# Scale the deployment to have five replicas of the database.
+oc scale --replicas=5 deploy/users-db
+
+# Observer the strategy
+[student@workstation users-db]$ oc get -o yaml deploy/users-db
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  ...output omitted...
+spec:
+  ...output omitted...
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+...output omitted...
+
+# Change the deployment strategy to Recreate by editing the application.yaml manifest.
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+...output omitted...
+    name: users-db
+  spec:
+    replicas: 5
+    selector:
+      matchLabels:
+        deployment: users-db
+    strategy:
+      type: Recreate
+      recreateParams:
+        post:
+          failurePolicy: Abort
+          execNewPod:
+            containerName: users-db
+            command: ["/post-deploy/import.sh"]
+    template:
+      metadata:
+...output omitted...
+
+# Run the oc apply command to update the deployment resource.
+oc apply -f application.yaml
+
+# Manually rollout new pods. 
+oc rollout restart deploy/users-db
 ```
