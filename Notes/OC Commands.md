@@ -232,11 +232,91 @@ oc create serviceaccount my-sa
 
 # Assign a custom service account to a deployment or a pod by using the oc set serviceaccount command:
 oc set serviceaccount deployment nginx-deployment my-sa
-
-
 ```
 
+## 14. Adding Storage to Deployments
+Use the 'oc set volume' command to add, update, remove, or list volumes and volume mounts for any resource with a pod template (such as deployments, deployment configs, or replication controllers). 
+```bash
+# The following is an example command to create and attach a PVC to an existing deployment called my-deployment:
+oc set volumes deploy/my-deployment \
+--add \
+--name nfs-volume-storage \
+--type pvc \
+--claim-mode rwo \
+--claim-size 1Gi \
+--mount-path /tmp/data \
+--claim-name my-data-claim
+```
 
+## 15. Types of probes
+| Probe Type | Purpose | Behavior on Failure | When It Runs | Configuration Attribute |
+|------------|---------|----------------------|---------------|--------------------------|
+| **Startup Probe** | Verifies whether the application within a container has started. | OpenShift kills the container and restarts it, depending on the pod's `restartPolicy`. | Runs only once, at startup, before any other probe. Other probes (readiness/liveness) don't start until this one succeeds. | `spec.containers.startupProbe` |
+| **Readiness Probe** | Determines whether a container is ready to serve requests (e.g., after network connections, file/cache loading, or other initial tasks). | OpenShift stops sending traffic to that pod until the probe succeeds. | Runs periodically. | `spec.containers.readinessProbe` |
+| **Liveness Probe** | Determines whether an application running in a container is in a healthy state. | OpenShift restarts the container. | Runs periodically. | `spec.containers.livenessProbe` |
+
+```bash
+# Readiness Probe
+# Adds an HTTP GET readiness check hitting port 8080 at /readyz. Checks every 20 seconds (--period-seconds). 
+# If it fails, OpenShift stops routing traffic to the pod until it passes again — the pod itself isn't restarted.
+oc set probe deployment/myapp \
+--readiness \
+--get-url=http://:8080/readyz \
+--period-seconds=20
+
+# Liveness Probe TCP Check
+# Uses a TCP socket check instead of HTTP — just verifies port 3306 (commonly MySQL) accepts connections.
+# Runs every 20 seconds.
+# Each check attempt must respond within 1 second (--timeout-seconds) or it's counted as a failure.
+# If it fails enough times, the container gets restarted.
+oc set probe deployment/myapp \
+--liveness \
+--open-tcp=3306 \
+--period-seconds=20 \
+--timeout-seconds=1
+
+# Liveness Probe HTTP Check. 
+# HTTP GET check against /livez on port 8080.
+# Waits 30 seconds after container start before running the first check (--initial-delay-seconds) — gives the app time to boot.
+# Needs just 1 successful check to be considered healthy (--success-threshold).
+# Needs 3 consecutive failures (--failure-threshold) before OpenShift restarts the container.
+oc set probe deployment/myapp \
+--liveness \
+--get-url=http://:8080/livez \
+--initial-delay-seconds=30 \
+--success-threshold=1 \
+--failure-threshold=3
+```
+
+## 16. Horizontal / Vertical Scaling
+### Horizontal Pod Autoscaler (HPA)
+
+Scales out/in — it changes the number of pod replicas running for a deployment/replicaset/statefulset.
+
+If CPU, memory, or a custom metric (e.g., requests per second) exceeds a target threshold, HPA spins up more pods to share the load.
+If demand drops, it scales the replica count back down.
+Good for stateless apps that can run multiple identical copies behind a service/load balancer.
+```bash
+oc autoscale deployment/myapp --min=2 --max=10 --cpu-percent=70
+```
+This keeps between 2–10 replicas of myapp, adding pods when average CPU exceeds 70%.
+
+### Vertical Pod Autoscaler (VPA)
+
+Scales up/down — it changes the resource requests/limits (CPU & memory) of individual pods, rather than the number of pods.
+
+Monitors actual usage over time and recommends (or automatically applies) more appropriate CPU/memory requests.
+Useful for workloads that can't easily be horizontally scaled (e.g., a single-instance database, or an app that isn't built to run multiple replicas).
+Typically requires pod restarts to apply new resource values (since resource requests are set at pod creation).
+
+
+
+
+
+
+
+
+<br>
 
 ## Pipeline Strategies
 
@@ -572,4 +652,148 @@ oc apply -f application.yaml
 
 # Manually rollout new pods. 
 oc rollout restart deploy/users-db
+```
+---
+<br>
+
+## Exersise 5.2:  Managing Application Deployments
+### Outcomes
+- Create deployments.
+- Debug failing deployments.
+- Configure application deployments by using the oc CLI.
+
+```bash
+oc login -u developer -p developer https://api.ocp4.example.com:6443
+oc project deployments-applications
+
+# Verify the project has secrets configured
+[student@workstation~l$ oc get secret
+NAME                      TYPE                        DATA              AGE
+builder-dockerfg-flfre    kubernetes.io/dockercfg     1                 27m
+default-dockercfg-9vs7c   kubernetes.io/dockercfg     1                 27m
+deployer-dockercfg-mztma  kubernetes.io/dockercfg     1                 27m
+pipeline-dockercfg-qr7m2  kubernetes.io/dockercfg     1                 27m
+postgresqu                Opaque                      3                 27m
+
+# Verify that the project contains the postgresql secret. This secret contains the login information for the deployed PostgreSQL database.
+[student@workstation expense-servicel$ oc describe secret postgresql
+...output omitted...
+Data
+====
+database-name:      8 bytes
+database-password:  16 bytes
+database-user:      7 bytes
+
+# View the secrets postgresql
+[student@workstation expense-servicel$ oc get secret postgresql -o yaml
+database-name: c2FtcGx1ZGI=
+database-password: WTRvWFBnV1hneG5PMERXcA==
+database-user: dXNlclQ×RA==
+
+# View the base64 decoded secret details
+echo -n 'c2FtcGxlZGI=' | base64 --decode; echo
+sampledb
+
+echo -n 'WTRVWFBnVIhneGSPMERXCA==' | base64 --decode; echo
+Y40XPgWXgxn00DWp
+
+echo -n 'dXlclQxRA==' | base64 --decode; echo
+userT1D
+
+# When you deploy the application it will fail. 
+oc new-app --name=expense-service --image=registry.ocp4.example.com:8443/redhattraining/ocpdev-expense-service:4.18
+oc get pod
+
+# View the logs 
+[student@workstation ~]$ oc logs deployment/expense-service | head
+...output omitted...
+2023-07-25 13:13:25,066 WARN  [io.agr.pool] (agroal-11) Datasource '<default>': FATAL: password authentication failed for user "userNWW"
+2023-07-25 13:13:25,069 WARN  [org.hib.eng.jdb.env.int.JdbcEnvironmentInitiator] (JPA Startup Thread) HHH000342: Could not obtain connection to query metadata: org.postgresql.util.PSQLException: FATAL: password authentication failed for user "userNWW"
+...output omitted...
+
+# Explore the application source code to determine the database configuration. View src/main/resources/application.properties. 
+# Notice the details don't match the configured secret
+...output omitted...
+quarkus.datasource.username=${DATABASE_USER:userNWW}
+quarkus.datasource.password=${DATABASE_PASSWORD:sr5ps4agHuDlTa5k}
+quarkus.datasource.jdbc.url=jdbc:postgresql://postgresql:5432/${DATABASE_NAME:sampledb}
+
+# Overwrite the application properties by using environment variables.
+oc set env deploy/expense-service --from=secret/postgresql
+
+# The application DB authentication should match the secret and the PODS should be running
+```
+---
+<br>
+
+
+## Exersise 5.3: Deploying Stateful Applications
+### Outcomes
+- Create and attach a persistent volume claim to a deployment.
+- Attach a configuration map as ephemeral storage to run a database initialization script.
+- Create a stateful set as an alternative way of running a stateful application.
+
+```bash
+# Verify that the database server is running. 
+[student@workstation ~]$ oc get deploy
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+mysql-db   1/1     1            1           1m
+
+# Attach a persistent volume claim (PVC) with the details below, 
+# Name:nfs-volume-storage
+# Mounted Path:/var/lib/mysql
+# Claim Mode:rwo
+# Claim Size:1Gi
+# Claim Name:mysql-db-pvc
+
+oc set volumes deploy/mysql-db \
+--add \
+--name nfs-volume-storage \
+--type pvc \
+--claim-mode rwo \
+--claim-size 1Gi \
+--mount-path /var/lib/mysql \
+--claim-name mysql-db-pvc
+
+# Verify that the PVC is attached to the database deployment.
+oc get deploy/mysql-db -o yaml | grep -iA 5 volumemounts
+"mountPath": "/var/lib/mysql",
+"name": "nfs-volume-storage"
+
+# Use a configuration map as an ephemeral volume to add initialization data to the database.
+oc create cm init-db-cm --from-file init-db.sql
+
+# Add the configuration map as a volume called init-db-volume to the deployment. Specify the volume type as configmap and set the /tmp/init-db directory as the mount path.
+oc set volumes deploy/mysql-db \
+--add \
+--name init-db-volume \
+--configmap-name init-db-cm \
+--type configmap \
+--mount-path /tmp/init-db
+
+# Verify that the PVC is attached to the database deployment.
+oc get deploy/mysql-db -o yaml | grep -iA 5 volumemounts
+"mountPath": "/var/lib/mysql",
+"name": "nfs-volume-storage"
+"mountPath": "/tmp/init-db",
+"name": "init-db-volume"
+
+# Use the mysql client to execute the database script in the /tmp/init-db volume. Ignore the warning message.
+oc rsh deploy/mysql-db mysql -udbuser -pdbuser items -e "source /tmp/init-db/init-db.sql"
+
+# Verify that the table is populated.
+oc rsh deploy/mysql-db mysql -udbuser -pdbuser items -e "select * from Item;"
+...output omitted...
++----+-------------------+------------+
+| id | description       | done       |
++----+-------------------+------------+
+|  1 | Pick up newspaper | 0x00       |
+|  2 | Buy groceries     | 0x01       |
++----+-------------------+------------+
+
+# Scale up the mysql-db deployment to 3 replicas
+oc scale --replicas 3 deploy/mysql-db
+
+# Observe that still only one PVC exists.
+oc get pvc
 ```
