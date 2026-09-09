@@ -309,9 +309,101 @@ Monitors actual usage over time and recommends (or automatically applies) more a
 Useful for workloads that can't easily be horizontally scaled (e.g., a single-instance database, or an app that isn't built to run multiple replicas).
 Typically requires pod restarts to apply new resource values (since resource requests are set at pod creation).
 
+## 17. Templates
+
+### Templating Commands
+```bash
+# List templates
+oc get templates
+
+# Inspect template
+oc describe template <name>
+oc get template <name> -o yaml
+
+# CREATE TEMPLATE RESOURCE
+oc create -f template.yaml
+
+# INSPECT PARAMETERS
+oc process -f template.yaml --parameters
+
+# PROCESS ONLY — DOES NOT CREATE RESOURCES
+oc process -f template.yaml \
+  -p PARAM=value
+
+oc process -f template.yaml \
+  -p PARAM=value \
+  -o yaml
+
+# PROCESS + CREATE
+oc process -f template.yaml \
+  -p PARAM=value \
+  | oc create -f -
+
+# DEPLOY DIRECTLY FROM TEMPLATE FILE
+oc new-app -f template.yaml \
+  -p PARAM=value
+
+# DEPLOY TEMPLATE STORED IN CLUSTER
+oc new-app --template=<template-name> \
+  -p PARAM=value
+
+# SAVE PROCESSED RESOURCES
+
+oc process -f template.yaml \
+  -p PARAM=value \
+  -o yaml > resources.yaml
+
+oc create -f resources.yaml
+```
+
+### YAML skeleton I'd memorize is only:
+```bash
+apiVersion: template.openshift.io/v1
+kind: Template
+
+metadata:
+  name: my-template
+
+objects:
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${APP_NAME}
+  spec:
+    # ...
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${APP_NAME}
+  spec:
+    # ...
+
+parameters:
+
+- name: APP_NAME
+  description: Application name
+  required: true
+
+- name: PASSWORD
+  generate: expression
+  from: "[a-zA-Z0-9]{12}"
+
+labels:
+  app: ${APP_NAME}
+```
+
+### The six things I'd make sure you can do without notes
+1. Recognize kind: Template.
+2. Know that resources go under objects:, not spec:.
+3. Create and reference a parameter with ${PARAMETER}.
+4. Discover parameters with oc process -f file.yaml --parameters.
+5. Understand that oc process generates resources but doesn't create them.
+6. Deploy from either a file with oc new-app -f or a stored template with oc new-app --template.
 
 
-
+## 18. Helm Charts
 
 
 
