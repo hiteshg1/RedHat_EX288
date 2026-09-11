@@ -1,6 +1,6 @@
 # EX288 Command Reference
 
-## 0. The exam rescue commands
+## The exam rescue commands
 
 These are arguably the most important commands to remember because they help you recover when you forget syntax.
 
