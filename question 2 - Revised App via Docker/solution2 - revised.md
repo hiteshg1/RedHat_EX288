@@ -108,7 +108,7 @@ oc get builds
 ### Step 8: Deploy the Built Image
 
 ```bash
-oc new-app container-build --name=container-build
+oc new-app container-build --name=webapp
 ```
 
 **Wait for deployment:**
@@ -122,7 +122,7 @@ oc get pods
 ### Step 9: Expose Service
 
 ```bash
-oc expose svc/container-build --hostname=app-optimize.apps.ocp4.example.com
+oc expose svc/webapp
 ```
 
 ---
@@ -131,7 +131,7 @@ oc expose svc/container-build --hostname=app-optimize.apps.ocp4.example.com
 
 ```bash
 oc get route
-curl http://build-crimson.apps.ocp4.example.com
+curl http://webapp-container-build.apps.ocp4.example.com
 ```
 
 **Expected output:**
