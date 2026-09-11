@@ -6,8 +6,11 @@
 
 Optimize, push, and use the Containerfile from `https://gitlab.com/hits.govind/container-build-revised.git` such that:
 
-- An application exists in the **container-build* project and is available at `http://webapp-container-build.apps-crc.testing`
-- An image built with the Containerfile can be used as a parent image to generate child images which allow overriding default content from `src/`
+- An application exists in the **container-build* project. 
+- The application name is webapp.
+- Is available at the URL `http://webapp-container-build.apps-crc.testing`
+- An image built with the Containerfile can be used as a parent image to generate child images,
+  which allow overriding default content from `src/`
 - An image built with the Containerfile has a maximum of **7 layers** and a maximum size of **256 MiB**
 
 ```
