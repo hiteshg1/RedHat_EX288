@@ -25,8 +25,8 @@ In concert with the source code from `http://git.ocp4.example.com/developer/oxy.
 
 **Create the repo in GitLab UI:**
 
-1. Go to `https://git.ocp4.example.com`
-2. Login as `developer` / `developer`
+1. Go to `https://gitlab.com`
+2. Login as `hits.govind@gmail.com` / `********`
 3. Click **"New project"** → **"Create blank project"**
 4. Project name: **oxy**
 5. **IMPORTANT:** 
@@ -40,7 +40,7 @@ In concert with the source code from `http://git.ocp4.example.com/developer/oxy.
 
 ```bash
 cd ~
-git clone https://git.ocp4.example.com/developer/oxy.git
+git clone https://gitlab.com/hits.govind/oxy.git
 cd oxy
 ```
 
@@ -64,7 +64,7 @@ cat > index.html <<'EOF'
   <title>Oxy Application</title>
 </head>
 <body>
-  <h1>Amor vincit omnia</h1>
+  <h1>This is the application oxy. If you see this its working.</h1>
 </body>
 </html>
 EOF

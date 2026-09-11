@@ -42,7 +42,7 @@ DATE=$(date "+%F")
 
 # Create info.html with date and required text
 echo "$DATE" > ./info.html
-echo "Astra inclinant, sed non obligant" >> ./info.html
+echo "This is the application oxy. If you see this its working." >> ./info.html
 
 # Call the original assemble script if it exists
 if [ -f /usr/libexec/s2i/assemble ]; then
@@ -111,7 +111,13 @@ oc get builds
 ---
 
 ### Step 7: Grant Access for tocin Namespace to Pull Image
+#### From the tocin project, you can deploy the new app using,
+#### > Add > Container Images
+#### > The image below allows you to use the iamge from the S2i-builds projects and specify the image.
+#### > It allows provides you with the policy add-role-to-user command to copy/paste into your terminal
+![alt text](image.png)
 
+#### Alternatively you can achive the same results via the Cli
 The `tocin` namespace needs permission to pull the image from `s2i-builds`:
 
 ```bash
