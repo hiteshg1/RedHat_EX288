@@ -146,6 +146,19 @@ Hello container!
 
 **Create a child image to verify ONBUILD works:**
 
+## Get the image resistry details for the parent container
+
+```bash
+ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ oc get is
+NAME     IMAGE REPOSITORY                                                                  TAGS     UPDATED
+webapp   default-route-openshift-image-registry.apps-crc.testing/container-build2/webapp   latest   4 minutes ago
+ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ oc get istag
+NAME            IMAGE REFERENCE                                                                                                                                    UPDATED
+webapp:latest   image-registry.openshift-image-registry.svc:5000/container-build2/webapp@sha256:a43d69f41430f9b48423678a27032567abc02abe37b67615d760d921c44bff81   4 minutes ago
+ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ 
+```
+####  From the istag, we can see the registry is at, image-registry.openshift-image-registry.svc:5000/container-build2/webapp
+
 ```bash
 cd ~
 mkdir child-test
@@ -153,7 +166,7 @@ cd child-test
 
 # Create child Dockerfile
 cat > Dockerfile <<EOF
-FROM image-registry.openshift-image-registry.svc:5000/crimson/container-build:latest
+FROM image-registry.openshift-image-registry.svc:5000/container-build2/webapp:latest
 EOF
 
 # Create src/ directory with override content
