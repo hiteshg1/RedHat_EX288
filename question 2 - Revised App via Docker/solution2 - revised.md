@@ -182,20 +182,32 @@ cat > src/index.html <<'EOF'
 </html>
 EOF
 
+# Sync with git
+git add .
+git commit -m "Adding child-test dir to git"
+git push
+
 # Create new build for child image
-oc new-build --name=container-build-child \
+oc new-build \
+  --name=child-app \
   --strategy=docker \
-  --binary=true
+  --context-dir=child-test \
+  https://gitlab.com/hits.govind/container-build-revised.git
 
 # Start build
-oc start-build container-build-child --from-dir=. --follow
+oc start-build child-app --follow
 
-# Deploy child
-oc new-app container-build-child --name=container-build-child
-oc expose svc/container-build-child --hostname=build-child-crimson.apps.ocp4.example.com
+# Check
+oc get builds
+oc get is
+oc get pods
+
+# Expose the app
+oc expose svc/child-app
+oc get route child-app
 
 # Test
-curl http://build-child-crimson.apps.ocp4.example.com
+curl http://child-app-container-build2.apps-crc.testing
 ```
 
 **Expected output:**
@@ -217,10 +229,10 @@ curl http://build-child-crimson.apps.ocp4.example.com
 
 ```bash
 # Check imagestream
-oc describe is/container-build
+oc describe is/child-app
 
 # Verify size is under 256 MiB
-oc get is container-build -o jsonpath='{.status.tags[0].items[0].dockerImageMetadata.Size}' | awk '{print $1/1024/1024 " MiB"}'
+oc get is child-app -o jsonpath='{.status.tags[0].items[0].dockerImageMetadata.Size}' | awk '{print $1/1024/1024 " MiB"}'
 ```
 
 ---
