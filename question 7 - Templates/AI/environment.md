@@ -1,121 +1,63 @@
-# Question 7: Deploy an Application from an OpenShift Template
+# Question 7 — Environment setup
 
-## Question
-A public PHP greeting application is available at:
+This prepares source, builder, and materials server only. It must not register the exam Template or create application `php-app`.
 
-https://gitlab.com/hits.govind/php-greeting-app.git
+## Prerequisites
 
-A template file named php-app.yaml is available from a fileserver at http://fileserver-indy.apps-crc.testing/files/php-app.yaml. 
+Use a running OpenShift 4.18 CRC with its internal registry enabled, a 4.18 `oc` client, Git, curl, and permission to create project resources. Cluster access to GitLab and Red Hat images is required. The workstation must resolve `*.apps-crc.testing`.
 
-Create an application that meets these requirements:
-
-Use project indy.
-
-Create a template named ex288-php-mysql.
-
-Label the template with template=php-app.
-
-Deploy an application named php-app from the template.
-
-Configure the greeting to display Namaste Architects!.
-
-Configure the route host as php-app-indy.<cluster-apps-domain>.
-
-Ensure all values needed to process and deploy the template are supplied.
-
-Verify that the build completes, the application pods run, and the route displays the required greeting.
----
-
-## Environment Setup
-
-### Step 1: Create the PHP Application Repository in GitLab
-
-**Create the repo in GitLab UI:**
-
-1. Go to `https://gitlab.com/hits.govind/
-2. Login as hits.govind@gmail.com
-3. Click **"New project"** → **"Create blank project"**
-4. Project name: **php-greeting-app**
-5. **IMPORTANT:** 
-   - Set visibility to **Public** or **Internal**
-6. Click **"Create project"**
-
----
-
-### Step 2: Clone the Repository
 ```bash
-cd ~
-git clone https://gitlab.com/hits.govind/php-greeting-app.git#main
+oc version
+oc whoami
+oc cluster-info
+```
+
+Use an otherwise clean `indy` project for a fresh attempt. If continuing in your existing `indy`, preserve unrelated resources and check that `php-app` resources will not conflict; these instructions do not delete previous work.
+
+## Source repository
+
+If the repository already contains the supplied application on `main`, use it unchanged. Otherwise create a blank public GitLab project `hits.govind/php-greeting-app` without initializing files, then from your study directory:
+
+```bash
+mkdir php-greeting-app
 cd php-greeting-app
+git init -b main
+git remote add origin https://gitlab.com/hits.govind/php-greeting-app.git
 ```
 
----
+Run the complete `index.php` creation block in the supplied **question7.md → Environment Setup → Step 3** unchanged. Then:
 
-### Step 3: Create PHP Application Files
-
-**Create the main PHP application:**
 ```bash
-cat > index.php <<'EOF'
-<?php
-$message = getenv('HELLO_MESSAGE') ?: 'Hello';
-$audience = getenv('HELLO_AUDIENCE') ?: 'World';
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Greeting Application</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        h1 {
-            font-size: 4em;
-            margin: 20px 0;
-        }
-    </style>
-</head>
-<body>
-    <h1><?php echo htmlspecialchars($message) . ' ' . htmlspecialchars($audience); ?>!</h1>
-    <p>This greeting is brought to you by OpenShift Templates</p>
-</body>
-</html>
-EOF
+git add index.php
+git commit -m "Prepare PHP greeting application"
+git push -u origin main
 ```
 
----
+Use your Git credential helper for authentication. For an existing repository, clone with `git clone --branch main https://gitlab.com/hits.govind/php-greeting-app.git`; Git clone does not accept `#main` as a URL branch selector.
 
-### Step 4: Commit and Push
+## Project and builder
+
+For a fresh lab:
+
 ```bash
-git add .
-git commit -m "Initial PHP greeting application"
-git push
-
-**Verify in GitLab:**
-
-Go to `https://gitlab.com/hits.govind/php-greeting-app.git` and verify you see:
-```
-php-greeting-app/
-├── README.md
-└── index.php
+oc new-project indy
 ```
 
----
+For an already prepared project, use `oc project indy` instead. Import a builder without depending on cluster-wide sample ImageStreams:
 
-### Step 5: Create the Template File (For Materials Server)
-
-**Create a materials directory:**
 ```bash
-mkdir -p ~/materials
-cd ~/materials
+oc import-image php:8.2 \
+  --from=registry.access.redhat.com/ubi9/php-82:latest --confirm
+oc get istag/php:8.2
 ```
 
-**Create the template file with default (incorrect) values:**
-```bash
-cat > php-app.yaml <<'EOF'
+Continue only when the imported image is available. This modern builder replaces the source material's assumed PHP 7.4 tag; the supplied greeting code is unchanged.
+
+## Materials server
+
+Create a local `materials` directory and save the following as `materials/php-app.yaml`. Only the source repository URL is adapted here. The original labels and parameter defaults remain for the candidate to inspect; no application is deployed. This complete template contains nine parameters and five objects.
+
+```yaml
 apiVersion: template.openshift.io/v1
 kind: Template
 labels:
@@ -160,7 +102,7 @@ parameters:
     displayName: Git Repository URL
     description: The URL of the repository with your application source code
     required: false
-    value: https://gitlab.com/hits.govind/php-greeting-app.git 
+    value: https://gitlab.com/hits.govind/php-greeting-app.git
   - name: SOURCE_REPOSITORY_REF
     displayName: Git Reference
     description: Set this to a branch name, tag or other ref of your repository
@@ -262,30 +204,29 @@ objects:
                   value: ${HELLO_MESSAGE}
                 - name: HELLO_AUDIENCE
                   value: ${HELLO_AUDIENCE}
-EOF
 ```
 
----
+From that directory, in project `indy`:
 
-### Step 6: Make Template Available (Simulate Materials Server)
-
-Create a deployment to serve the file (choose any project default is fine):
-```bash
-oc new-app --name=fileserver registry.access.redhat.com/ubi9/httpd-24
-oc expose svc/fileserver
-```
-
-Create a configmap and mount it to the deployment:
 ```bash
 oc create configmap php-materials --from-file=php-app.yaml
-
-oc set volume deploy/fileserver --add --name=content \
+oc new-app --name=fileserver --docker-image=registry.access.redhat.com/ubi9/httpd-24:latest
+oc set volume deployment/fileserver --add --name=content \
   --type=configmap --configmap-name=php-materials \
   --mount-path=/var/www/html/files
+oc expose service/fileserver
+oc rollout status deployment/fileserver --timeout=5m
 ```
 
----
+Keep the file name `php-app.yaml`: it becomes the ConfigMap key and served filename. The mount supplies `/var/www/html/files/php-app.yaml` to the HTTP server. No separate application database or PVC is needed.
 
-**Setup complete.** The PHP application code is in GitLab and the template file is ready for modification.
+## Confirm readiness
 
----
+```bash
+oc get istag/php:8.2
+oc get deployment/fileserver svc/fileserver route/fileserver
+curl --fail http://fileserver-indy.apps-crc.testing/files/php-app.yaml
+git ls-remote https://gitlab.com/hits.govind/php-greeting-app.git refs/heads/main
+```
+
+Confirm HTTP returns the complete Template YAML, the builder tag resolves, and Git returns a SHA for `main`. Leave the candidate Template unregistered and `php-app` undeployed. Continue with [question.md](question.md).
