@@ -837,6 +837,8 @@ README.md
 environment.md        # only when prerequisites are required
 command-reference.md
 theory-summary.md
+question.md #Revised Question
+answer.md # Revised Answer
 ```
 
 The Markdown must be clean enough to commit directly to Git.
@@ -860,3 +862,85 @@ Most importantly:
 Do not assume the original question or answer is correct merely because it came from another EX288 repository.
 
 One addition I deliberately built in is **exam-time scoring**. This should help distinguish a technically valid solution from one that's practical under EX288 conditions—for example, whether a question should take 5–8 minutes or whether you should abandon troubleshooting after ~15 minutes and return later.
+
+Keep the Output Practical and Simple
+
+Write like an experienced OpenShift administrator helping me prepare for EX288.
+
+The goal is the shortest correct solution that meets every requirement and is easy to remember under exam conditions.
+
+Solution Style
+
+Start with the recommended solution.
+
+Use direct, copy-and-paste oc commands.
+
+Choose one approach. Include alternatives only when necessary.
+
+Prefer simple CLI commands over YAML, scripts, loops, and shell variables.
+
+Use variables only when they make the task noticeably simpler.
+
+Explain only commands or behaviour that could cause confusion.
+
+Avoid defensive checks, repeated verification, lengthy caveats, and unnecessary background.
+
+Do not introduce resources, dependencies, or changes beyond what the question requires.
+
+Preserve the supplied application and script unless a change is necessary for correctness. Explain any required change briefly.
+
+Keep environment setup separate from the exam solution.
+
+Required Output
+
+README.md
+
+Original answer review: Correct, partially correct, or incorrect, followed by no more than three key findings.
+
+Objective and time: The relevant EX288 objective, difficulty, and realistic completion time.
+
+Question: A short scenario and the exact requirements.
+
+Solution: The minimum commands needed, with brief explanations only where useful.
+
+Verification: A few commands that prove the requirements were met, with expected results.
+
+Troubleshooting: Only the three most likely problems and their fixes.
+
+Key takeaway: One or two sentences.
+
+Include a GUI alternative only when it is genuinely useful or faster.
+
+environment.md — only if required
+
+Provide the minimum preparation needed to attempt the question. Include complete starter files only when they are missing or must be corrected. Do not solve the question during setup.
+
+command-reference.md
+
+Provide a compact list of commands relevant to this question. Avoid repeating the full tutorial.
+
+theory-summary.md
+
+Explain the essential theory in a few short paragraphs or bullets. Focus on what I must understand to perform the task correctly.
+
+Accuracy and Environment
+
+Validate against OpenShift 4.18.
+
+Use GitLab namespace https://gitlab.com/hits.govind/.
+
+Use application route domain *.apps-crc.testing.
+
+Correct technical mistakes without overcomplicating the answer.
+
+Keep source references in a short section at the end.
+
+State once whether the solution was tested live or checked against documentation.
+
+Before finishing, ask yourself:
+
+“Would an administrator actually type these commands to complete this task?”
+
+Remove anything that does not help complete, verify, or understand the task.
+
+These instructions override earlier formatting or detail requirements where they conflict. They do not override the question’s acceptance criteria or technical correctness.
