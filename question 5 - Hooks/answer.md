@@ -10,8 +10,8 @@ git ls-remote https://gitlab.com/hits.govind/blog.git refs/heads/main
 
 oc set build-hook bc/blog --post-commit --script='python3 mailer.py'
 
-BUILD=$(oc start-build blog -o name)
-oc logs -f "$BUILD"
+oc start-build blog
+oc logs -f bc/blog
 ```
 
 Keep the same terminal for verification. `BUILD` captures the actual build name. All changes are to OpenShift configuration; no source edit or Git push is needed.

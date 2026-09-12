@@ -12,20 +12,19 @@ oc get bc/blog -o jsonpath='{.spec.postCommit}{"\n"}'
 ## Build execution and evidence
 
 ```bash
-BUILD=$(oc start-build blog -o name)       # Start and capture one build.
-oc logs -f "$BUILD"                       # Follow that build's output.
-oc wait --for=jsonpath='{.status.phase}'=Complete "$BUILD" --timeout=10m
-oc describe "$BUILD"                      # Inspect failure details.
-oc get builds --sort-by=.metadata.creationTimestamp
+oc start-build blog                     # Start and capture one build.
+oc logs -f bc/blog                      # Follow that build's output.
+oc describe bc/blog                     # Inspect failure details.
+oc get builds
 ```
 
 ## Application and route
 
 ```bash
-oc rollout status deployment/blog --timeout=3m
+oc rollout status deployment/blog
 oc logs deployment/blog
 oc get route/blog
-curl --fail --show-error "http://$(oc get route/blog -o jsonpath='{.spec.host}')"
+curl "http://$(oc get route/blog -o jsonpath='{.spec.host}')"
 ```
 
 ## Source revision
