@@ -151,6 +151,39 @@ If you can see this your configmap works
 ```
 
 ---
+# Solution via the GUI
+## Create the project
+### Step 1: Create an container application 
+- Application Name: phosphoric
+- Name: phosphoric
+- Resource Type: Deployment (Leave unchanged)
+- Target Port: 8080 (Leave unchaged)
+- Create Route: Tick (Untick create secure route)
+- Create the application
+- Confirm the application starts without errors
+- Open URL > Hello OpenShift!
+![alt text](image.png)
+
+### Step 2: Create a ConfigMap
+- Developer Perspective: Click ConfigMaps
+- Click Create ConfigMap
+- Select YAML View
+- Remove binaryData:{} and immuatable: false. Not required in YAML.
+- Create the YAML
+  - name: sedicen
+  - RESPONSE: "If you can see this, it works"
+![alt text](image-1.png)
+
+### Step 3: Add secret to ENV variables in Deployment
+- Administrator Perspective > Workloads > Deployments
+- Click on the phosphoric name > Click on Environment tab
+- Click + Add from ConfigMap or Secret
+- Enter RESPONSE for Name
+- Select sedicen > Select a resource
+- Select RESPONSE > Select a key
+![alt text](image-2.png)
+
+
 
 ## Success Criteria
 

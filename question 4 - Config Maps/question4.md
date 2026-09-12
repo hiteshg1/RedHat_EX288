@@ -2,7 +2,7 @@
 
 ## Question
 
-Using the `openshift/hello-openshift` image, deploy an application that meets the following requirements:
+Using the `docker.io/openshift/hello-openshift` image, deploy an application that meets the following requirements:
 
 - The application is part of a project named: **acid**
 - The application is named: **phosphoric**
