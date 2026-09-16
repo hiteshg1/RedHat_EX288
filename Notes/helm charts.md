@@ -778,3 +778,14 @@ And conceptually, the single most important distinction is:
 **`helm template` renders manifests for inspection; `helm install` actually creates a release.**
 
 That is almost identical to the distinction you just learned between **`oc process`** and actually creating resources from an OpenShift Template.
+
+# 21. Helm Template Filters
+
+| Function	     | Purpose	                            | Example |
+| --- | --- | --- |
+quote	  |        Wrap value in quotes	  |               {{ .image | quote }} |
+b64enc	   |     Base64 encode	 |                      {{ .password | b64enc }} |
+b64dec	 |       Base64 decode	    |                   {{ .value | b64dec }} |
+randAlphaNum |	 Generate random letters/numbers	 |    {{ randAlphaNum 20 }} |
+default	   |     Use fallback if value is empty	  |     {{ .Values.replicas | default 1 }} |
+required	   |   Fail rendering if value is missing	 |  {{ required "image required" .Values.image }} |

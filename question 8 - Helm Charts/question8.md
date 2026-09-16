@@ -4,7 +4,7 @@
 
 Deploy an application using Helm that meets the following requirements:
 
-- The application uses the image: `registry.ocp4.example.com/ex288-api:latest`
+- The application uses the image: `default-route-openshift-image-registry.apps-crc.testing/ex288-api:latest`
 - The application is part of a project named: **exam-resource**
 - The application is named: **exam-api**
 - The application is available at `http://exam-api-exam-resource.apps.ocp4.example.com`
@@ -142,6 +142,17 @@ EOF
 ---
 
 ### Step 3: Build and Push Image to Internal Registry
+**Login to internal registry:**
+```bash
+# Get token
+TOKEN=$(oc whoami -t)
+
+# Get the internal registry route
+REGISTRY=$(oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}')
+
+# Login
+podman login -u developer -p ${TOKEN} ${REGISTRY} --tls-verify=false
+```
 
 **Build the container image:**
 ```bash
@@ -153,20 +164,10 @@ podman build -t ex288-api:latest .
 
 **Tag for internal registry:**
 ```bash
-# Get the internal registry route
-REGISTRY=$(oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}')
-
 # Tag the image
 podman tag ex288-api:latest ${REGISTRY}/exam-resource/ex288-api:latest
 ```
-
-**Login to internal registry:**
-```bash
-# Get token
-TOKEN=$(oc whoami -t)
-
-# Login
-podman login -u developer -p ${TOKEN} ${REGISTRY} --tls-verify=false
+ 
 ```
 
 **Push image:**
@@ -192,11 +193,10 @@ oc create imagestream ex288-api -n exam-resource
 # Import the image
 oc import-image ex288-api:latest \
   --from=${REGISTRY}/exam-resource/ex288-api:latest \
-  --confirm \
-  -n exam-resource
+  --confirm
 
 # Verify
-oc get is ex288-api -n exam-resource
+oc get is ex288-api
 ```
 
 ---
