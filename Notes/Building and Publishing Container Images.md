@@ -9,8 +9,9 @@
 
 Use the following as the input data for the required actions:
 
-| Application name	        | custom-server |
+| Parameter        | Value |
 | ---	        | --- |
+| Application name	        | custom-server |
 | Image name	            | custom-server:1.0.0 |
 | Image registry	        | registry.ocp4.example.com:8443 |
 | Image registry namespace	| developer |
