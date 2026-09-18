@@ -185,8 +185,10 @@ postgresql-statefulset-1                1/1     Running   0          9m52s      
 ```bash
 ansible@fedora-prd-rnd:~$ oc get pvc
 NAME                            STATUS    VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                   VOLUMEATTRIBUTESCLASS   AGE
-data-postgresql-statefulset-0   Bound     pvc-7281718e-2a04-4749-b16c-ba1d9de79f65   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 13m # Stateful
-data-postgresql-statefulset-1   Bound     pvc-ca85c576-bd9d-494c-9c7c-1944894e6dea   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 11m # Stateful
-postgresql-deployment-data      Bound     pvc-36c05d70-0a76-4231-837a-fae025620faa   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 15m # Deployment
+# Stateful
+data-postgresql-statefulset-0   Bound     pvc-7281718e-2a04-4749-b16c-ba1d9de79f65   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 13m 
+data-postgresql-statefulset-1   Bound     pvc-ca85c576-bd9d-494c-9c7c-1944894e6dea   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 11m
+# Deployment
+postgresql-deployment-data      Bound     pvc-36c05d70-0a76-4231-837a-fae025620faa   79Gi       RWO            crc-csi-hostpath-provisioner   <unset>                 15m 
 ```
 
