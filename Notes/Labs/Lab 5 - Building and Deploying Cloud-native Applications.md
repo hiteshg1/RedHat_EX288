@@ -66,6 +66,7 @@ oc set volume deploy/postgresql \
 ```
 
 ### Task 2: 
+
 #### Create the expense-service app via the GUI
 ![alt text](image-1.png)
 ![alt text](image-2.png)
