@@ -1,57 +1,8 @@
 
 ---
 # Question 3: Customize S2I Builder Image Scripts
-### Part 1 — Build the application
 
-1. Create a project named `s2i-builds`.
-2. Build an application named `oxy` using Source-to-Image (S2I).
-3. Use branch `main` of this Git repository:
-
-   `https://gitlab.com/hits.govind/oxy
-
-4. In the repository, modify `.s2i/bin/assemble` so that, during the image build, it:
-   - Copies all `*.html` files directly under `/tmp/src` into the builder’s application working directory.
-   - Creates `info.html` in that directory with two lines:
-
-     ```text
-     <image build date in YYYY-MM-DD format>
-     This is the application oxy. If you see this its working.
-     ```
-
-5. Make the assemble script executable, then commit and push the changes to `main`.
-6. Use the S2I-compatible `httpd:2.4-ubi9` builder image from the namespace or registry specified by the exam.
-7. Ensure `index.html` displays:
-
-   ```text
-   Amor vincit omnia
-   ```
-
-8. Complete the build and make the resulting application image available as `oxy:latest` in `s2i-builds`.
-
-### Part 2 — Deploy the application
-
-1. Create a project named `tocin`.
-2. Deploy an application named `oxy` using the image built in Part 1.
-3. Configure the necessary permissions for the deployment to pull the image from `s2i-builds`.
-4. Create a Service and expose the application at:
-
-   `http://oxy-tocin.apps.ocp4.example.com`
-
-5. Verify that `/` displays:
-
-   ```text
-   Amor vincit omnia
-   ```
-
-6. Verify that `/info.html` displays the image build date followed by:
-
-   ```text
-   DATE
-   This is the application oxy. If you see this its working.
-   ```
-
-
----
+## To simulate this lab, reset the gitlab repo as per the environment setup below.
 
 ## Environment Setup
 
@@ -169,4 +120,55 @@ This namespace will hold the S2I image build.
 ---
 
 **Setup complete.** The basic S2I structure is ready for customization, and the build namespace exists.
+
+## Question 3
+
+### Part 1 — Build the application
+
+1. Create a project named `s2i-builds`.
+2. Build an application named `oxy` using Source-to-Image (S2I).
+3. Use branch `main` of this Git repository:
+
+   `https://gitlab.com/hits.govind/oxy
+
+4. In the repository, modify `.s2i/bin/assemble` so that, during the image build, it:
+   - Copies all `*.html` files directly under `/tmp/src` into the builder’s application working directory.
+   - Creates `info.html` in that directory with two lines:
+
+     ```text
+     <image build date in YYYY-MM-DD format>
+     This is the application oxy. If you see this its working.
+     ```
+
+5. Make the assemble script executable, then commit and push the changes to `main`.
+6. Use the S2I-compatible `httpd:2.4-ubi9` builder image from the namespace or registry specified by the exam.
+7. Ensure `index.html` displays:
+
+   ```text
+   Amor vincit omnia
+   ```
+
+8. Complete the build and make the resulting application image available as `oxy:latest` in `s2i-builds`.
+
+### Part 2 — Deploy the application
+
+1. Create a project named `tocin`.
+2. Deploy an application named `oxy` using the image built in Part 1.
+3. Configure the necessary permissions for the deployment to pull the image from `s2i-builds`.
+4. Create a Service and expose the application at:
+
+   `http://oxy-tocin.apps.ocp4.example.com`
+
+5. Verify that `/` displays:
+
+   ```text
+   Amor vincit omnia
+   ```
+
+6. Verify that `/info.html` displays the image build date followed by:
+
+   ```text
+   DATE
+   This is the application oxy. If you see this its working.
+   ```
 
