@@ -86,8 +86,11 @@ git push origin master
 # Switch to build namespace
 oc project s2i-builds
 
+# Confirming what images are available in the Image Registry
+oc is -n openshift | grep httpd
+
 # Create the S2I build
-oc new-app httpd:2.4~https://git.ocp4.example.com/developer/oxy.git#master \
+oc new-app httpd:2.4-ubi9~https://gitlab.com/hits.govind/oxy.git#main \
   --name=oxy \
   --strategy=source
 
