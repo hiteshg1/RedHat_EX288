@@ -7,7 +7,7 @@
 2. Build an application named `oxy` using Source-to-Image (S2I).
 3. Use branch `main` of this Git repository:
 
-   `http://git.ocp4.example.com/developer/oxy.git`
+   `https://gitlab.com/hits.govind/oxy
 
 4. In the repository, modify `.s2i/bin/assemble` so that, during the image build, it:
    - Copies all `*.html` files directly under `/tmp/src` into the builder’s application working directory.
