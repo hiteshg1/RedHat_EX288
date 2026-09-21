@@ -1,21 +1,55 @@
 
 ---
 # Question 3: Customize S2I Builder Image Scripts
+### Part 1 — Build the application
 
-In concert with the source code from `http://git.ocp4.example.com/developer/oxy.git`, customize the behavior of the existing `httpd-24` builder image scripts to deploy an application that meets the following requirements:
+1. Create a project named `s2i-builds`.
+2. Build an application named `oxy` using Source-to-Image (S2I).
+3. Use branch `main` of this Git repository:
 
-- **Build the S2I image in the `s2i-builds` namespace**
-- **Deploy the application in the `tocin` namespace, consuming the image from `s2i-builds`**
-- The application is named: **oxy**
-- During the build of the image, as part of the assemble script, `/tmp/src/*.html` files are copied into `./`
-- Once deployed, the application is running and available at `http://oxy-tocin.apps.ocp4.example.com`, displaying the following text:
-  ```
-  This is the application oxy. If you see this its working.  
-  ```
-- Browsing to `http://oxy-tocin.apps.ocp4.example.com/info.html` displays an information page with the date when the application was built (YYYY-mm-dd format), as well as the text:
-  ```
-  Your info.html is working if you see this. 
-  ```
+   `http://git.ocp4.example.com/developer/oxy.git`
+
+4. In the repository, modify `.s2i/bin/assemble` so that, during the image build, it:
+   - Copies all `*.html` files directly under `/tmp/src` into the builder’s application working directory.
+   - Creates `info.html` in that directory with two lines:
+
+     ```text
+     <image build date in YYYY-MM-DD format>
+     This is the application oxy. If you see this its working.
+     ```
+
+5. Make the assemble script executable, then commit and push the changes to `main`.
+6. Use the S2I-compatible `httpd:2.4-ubi9` builder image from the namespace or registry specified by the exam.
+7. Ensure `index.html` displays:
+
+   ```text
+   Amor vincit omnia
+   ```
+
+8. Complete the build and make the resulting application image available as `oxy:latest` in `s2i-builds`.
+
+### Part 2 — Deploy the application
+
+1. Create a project named `tocin`.
+2. Deploy an application named `oxy` using the image built in Part 1.
+3. Configure the necessary permissions for the deployment to pull the image from `s2i-builds`.
+4. Create a Service and expose the application at:
+
+   `http://oxy-tocin.apps.ocp4.example.com`
+
+5. Verify that `/` displays:
+
+   ```text
+   Amor vincit omnia
+   ```
+
+6. Verify that `/info.html` displays the image build date followed by:
+
+   ```text
+   DATE
+   This is the application oxy. If you see this its working.
+   ```
+
 
 ---
 
