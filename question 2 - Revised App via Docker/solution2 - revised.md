@@ -10,28 +10,12 @@ oc new-project container-build
 
 ```bash
 cd ~
-git clone https://git.ocp4.example.com/developer/build.git
-cd build
-cat Dockerfile
+git clone https://gitlab.com/hits.govind/container-build
+cd container-build
+vim Dockerfile
 ```
 
-### Step 3: Count Current Layers (Before Optimization)
-
-```bash
-grep -E '^(FROM|RUN|COPY|ADD|LABEL|MAINTAINER)' Dockerfile | wc -l
-```
-
-**Current layer count:** Around 8-9 layers (needs optimization)
-
----
-
-### Step 4: Optimize the Dockerfile
-
-```bash
-vi Dockerfile
-```
-
-**Apply these optimizations:**
+### Step 3 - Apply these optimizations
 
 1. **Combine multiple RUN statements into one** (reduces layers)
 2. **Combine multiple LABEL statements** (reduces layers)
@@ -55,7 +39,7 @@ RUN microdnf install -y python3 && \
 
 ENV DOCROOT=/app
 
-ONBUILD COPY src/ ${DOCROOT} <- or you can use /app directly 
+ONBUILD COPY src/ /app
 
 EXPOSE 8080
 
@@ -68,41 +52,79 @@ CMD ["python3", "-m", "http.server", "8080"]
 
 ---
 
-### Step 5: Verify Layer Count (After Optimization)
-
+### Step 4: Build the image locally and ensure in means the requirements
 ```bash
-grep -E '^(FROM|RUN|COPY|ADD|LABEL|ONBUILD)' Dockerfile | wc -l
+podman build -t webapp-parent .
+
+podman images
+
+podman run --rm --name webapp-parent webapp-parent:latest
 ```
 
-**New layer count:** Should be 4-5 layers (well under 7)
 
----
-
-### Step 6: Commit and Push Optimized Dockerfile
-
+### Step 5: Commit and Push Optimized Dockerfile
 ```bash
-git add Dockerfile
+git add .
 git commit -m "Optimize Dockerfile - combine RUN/LABEL, add ONBUILD"
-git push origin master
+git push
 ```
+
+### Step 6: Build the Parent application
+Build the parent application
+```bash
+oc new-app --name webapp-parent --strategy=docker https://gitlab.com/hits.govind/container-build
+```
+
+Verify the application is fine
+```bash
+oc get po -w
+```
+
+Expose the service and check the application
+```bash
+oc expose svc/webapp-parent-container-builds.apps.crc.testing
+
+oc get route
+
+curl http://webapp-parent
+```
+
 
 ---
+## Part 2
+### Step 6: Build Image Using Binary Build (modify the Dockerfile to use the parent image)
 
-### Step 7: Build Image Using Binary Build
-
+Get the image path for the parent image
 ```bash
-oc new-app --name container-build https://git.link 
-or
-oc new-build --name=container-build --strategy=docker --binary=true
-oc start-build container-build --from-dir=. --follow
+oc get images | grep webapp-parent
+```
+Modify the Dockerfile for the child-app
+```bash
+FROM image-registry.openshift-image-registry.svc:5000/container-build/webapp-parent
 ```
 
-**Wait for build to complete:**
-
+Build the child app
 ```bash
-oc get builds
+oc new-build --name=webapp-child --strategy=docker --binary=true
+
+oc start-build webapp-child --from-dir=. --follow
 ```
 
+Create the child app
+```bash
+oc new-app webapp-child:latest --name=webapp-child
+```
+
+Verify the build completed successfully.
+```bash
+oc get po -w
+```
+
+Expose the service and curl the route
+```bash
+oc expose svc/webapp-child
+
+curl http://webapp-child-container-builds.apps.crc.testing
 ---
 
 ### Step 8: Deploy the Built Image
@@ -140,102 +162,7 @@ curl http://webapp-container-build.apps.ocp4.example.com
 Hello container!
 ```
 
----
 
-### Step 11: Test ONBUILD Functionality (Child Image)
-
-**Create a child image to verify ONBUILD works:**
-
-## Get the image resistry details for the parent container
-
-```bash
-ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ oc get is
-NAME     IMAGE REPOSITORY                                                                  TAGS     UPDATED
-webapp   default-route-openshift-image-registry.apps-crc.testing/container-build2/webapp   latest   4 minutes ago
-ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ oc get istag
-NAME            IMAGE REFERENCE                                                                                                                                    UPDATED
-webapp:latest   image-registry.openshift-image-registry.svc:5000/container-build2/webapp@sha256:a43d69f41430f9b48423678a27032567abc02abe37b67615d760d921c44bff81   4 minutes ago
-ansible@fedora-prd-rnd:~/examprep/container-build-revised/child-test$ 
-```
-####  From the istag, we can see the registry is at, image-registry.openshift-image-registry.svc:5000/container-build2/webapp
-
-```bash
-cd ~
-mkdir child-test
-cd child-test
-
-# Create child Dockerfile
-cat > Dockerfile <<EOF
-FROM image-registry.openshift-image-registry.svc:5000/container-build2/webapp:latest
-EOF
-
-# Create src/ directory with override content
-mkdir src
-cat > src/index.html <<'EOF'
-<!DOCTYPE html>
-<html>
-<head><title>Child Override</title></head>
-<body>
-  <h1>Child Image Content</h1>
-  <p>ONBUILD successfully copied src/ content!</p>
-</body>
-</html>
-EOF
-
-# Sync with git
-git add .
-git commit -m "Adding child-test dir to git"
-git push
-
-# Create new build for child image
-oc new-build \
-  --name=child-app \
-  --strategy=docker \
-  --context-dir=child-test \
-  https://gitlab.com/hits.govind/container-build-revised.git
-
-# Start build
-oc start-build child-app --follow
-
-# Check
-oc get builds
-oc get is
-oc get pods
-
-# Expose the app
-oc expose svc/child-app
-oc get route child-app
-
-# Test
-curl http://child-app-container-build2.apps-crc.testing
-```
-
-**Expected output:**
-
-```html
-<!DOCTYPE html>
-<html>
-<head><title>Child Override</title></head>
-<body>
-  <h1>Child Image Content</h1>
-  <p>ONBUILD successfully copied src/ content!</p>
-</body>
-</html>
-```
-
----
-
-### Step 12: Verify Image Size and Layers
-
-```bash
-# Check imagestream
-oc describe is/child-app
-
-# Verify size is under 256 MiB
-oc get is child-app -o jsonpath='{.status.tags[0].items[0].dockerImageMetadata.Size}' | awk '{print $1/1024/1024 " MiB"}'
-```
-
----
 
 ## Success Criteria
 
@@ -275,51 +202,6 @@ oc describe is/<imagestream>
 ```
 
 ---
-
-## Optimization Techniques
-
-### Layer Reduction:
-
-1. **Combine RUN statements:**
-   ```dockerfile
-   # Bad (4 layers)
-   RUN command1
-   RUN command2
-   RUN command3
-   RUN command4
-   
-   # Good (1 layer)
-   RUN command1 && \
-       command2 && \
-       command3 && \
-       command4
-   ```
-
-2. **Combine LABEL statements:**
-   ```dockerfile
-   # Bad (3 layers)
-   LABEL key1="value1"
-   LABEL key2="value2"
-   LABEL key3="value3"
-   
-   # Good (1 layer)
-   LABEL key1="value1" \
-         key2="value2" \
-         key3="value3"
-   ```
-
-3. **Clean package cache in same RUN:**
-   ```dockerfile
-   RUN microdnf install -y package && \
-       microdnf clean all
-   ```
-
-### Size Reduction:
-
-- Use minimal base images (ubi-minimal instead of ubi)
-- Clean package manager cache in same RUN statement
-- Remove unnecessary files and build dependencies
-- Use `.dockerignore` to exclude unnecessary files from build context
 
 
 ### Helpful commands 

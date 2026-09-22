@@ -33,13 +33,13 @@ RUN echo "Hello container!" > /app/index.html
 
 ENV DOCROOT=/app
 
-EXPOSE 80
+EXPOSE 8080
 
 USER 1001
 
 WORKDIR /app
 
-CMD ["python3", "-m", "http.server", "80"]
+CMD ["python3", "-m", "http.server", "8080"]
 EOF
 ```
 
@@ -108,13 +108,49 @@ build/
 
 ---
 ## Question 2
-
-Optimize, push, and use the Containerfile from `https://gitlab.com/hits.govind/container-build-revised.git` such that:
-
-- The project name is called 'container-build'. 
-- The application name is webapp.
-- The application must be available at the URL `http://q2-web-container-build.apps-crc.testing`
-- An image built with the Containerfile can be used as a parent image to generate child images,
-  which allow overriding default content from `src/`
+### Part 1
+Build a application from a container file that resides in the following repository, `https://gitlab.com/hits.govind/container-build', such that
 - An image built with the Containerfile has a maximum of **7 layers** and a maximum size of **256 MiB**
+
 - If the container is crashlooping, troubleshoot the application. 
+- The project name is called 'container-build'. 
+- The parent application name is webapp-parent.
+- The application must be available at the URL `http://webapp-parent-container-build.apps-crc.testing`
+
+
+### Part 2
+Build the child application from the parent image. 
+- Build the child application from the parent image. An image built with the Containerfile can be used as a parent image to generate child images,
+  which allow overriding default content from `src/`
+- The child app is called webapp-child and is available at the URL `http://webapp-child-container-build.apps-crc.testing`
+
+
+
+### Part 2 — Build and deploy the child application
+
+- Create a separate child build context containing:
+
+  ```text
+  child/
+  ├── Dockerfile
+  └── src/
+      └── index.html
+  ```
+
+- The child Dockerfile must contain only a `FROM` instruction referencing the parent image built in Part 1.
+- Use the supplied child HTML as `src/index.html`.
+- Build and deploy the child application as `webapp-child` in the `container-build` project.
+- Expose it at:
+
+  `http://webapp-child-container-build.apps-crc.testing`
+
+- Verify that its home page displays:
+
+  ```text
+  This content is from the child image src/ directory
+  If you see this, COPY worked correctly!
+  ```
+
+- Verify that the parent application still displays `Hello container!`.
+
+The layer and size limits in Part 1 apply to the parent image.
