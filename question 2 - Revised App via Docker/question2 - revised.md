@@ -1,19 +1,8 @@
 
-```markdown
 # Question 2: Optimize a Containerfile
+### (Timed Exercise - 15 minutes)
 
-## Question
-
-Optimize, push, and use the Containerfile from `https://gitlab.com/hits.govind/container-build-revised.git` such that:
-
-- The project name is called 'container-build'. The application name is webapp.
-- Is application must be available at the URL `http://webapp-container-build.apps-crc.testing`
-- An image built with the Containerfile can be used as a parent image to generate child images,
-  which allow overriding default content from `src/`
-- An image built with the Containerfile has a maximum of **7 layers** and a maximum size of **256 MiB**
-
-```
-
+## Reset the lab using the environment details below. Ensure the gitrepo is synced. 
 ## Environment Setup
 
 ### Step 1: Create the Build Repository with Unoptimized Dockerfile
@@ -33,7 +22,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 LABEL version="1.0"
 LABEL description="this is Dockerfile"
-LABEL Red Hat Training <training@redhat.com>
+LABEL maintainer="Red Hat Training <training@redhat.com>"
 
 USER root
 
@@ -44,13 +33,13 @@ RUN echo "Hello container!" > /app/index.html
 
 ENV DOCROOT=/app
 
-EXPOSE 8080
+EXPOSE 80
 
 USER 1001
 
 WORKDIR /app
 
-CMD ["python3", "-m", "http.server", "8080"]
+CMD ["python3", "-m", "http.server", "80"]
 EOF
 ```
 
@@ -118,3 +107,14 @@ build/
 **Setup complete.** The unoptimized Dockerfile is ready for the solution phase.
 
 ---
+## Question 2
+
+Optimize, push, and use the Containerfile from `https://gitlab.com/hits.govind/container-build-revised.git` such that:
+
+- The project name is called 'container-build'. 
+- The application name is webapp.
+- The application must be available at the URL `http://q2-web-container-build.apps-crc.testing`
+- An image built with the Containerfile can be used as a parent image to generate child images,
+  which allow overriding default content from `src/`
+- An image built with the Containerfile has a maximum of **7 layers** and a maximum size of **256 MiB**
+- If the container is crashlooping, troubleshoot the application. 
