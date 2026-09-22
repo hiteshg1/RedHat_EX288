@@ -4,6 +4,8 @@
 
 ```bash
 oc new-project container-build
+
+oc project
 ```
 
 ### Step 2: Clone and Inspect
@@ -58,7 +60,9 @@ podman build -t webapp-parent .
 
 podman images
 
-podman run --rm --name webapp-parent webapp-parent:latest
+podman run -d --rm --name webapp-parent -p 8081:8080 webapp-parent:latest
+
+curl http://127.0.0.1:8081
 ```
 
 
@@ -70,9 +74,13 @@ git push
 ```
 
 ### Step 6: Build the Parent application
-Build the parent application
+Build the parent application (Use the GUI if you get an error )error: --strategy is specified and none of the arguments provided could be classified as a source code location
 ```bash
-oc new-app --name webapp-parent --strategy=docker https://gitlab.com/hits.govind/container-build
+oc new-app https://gitlab.com/hits.govind/container-build --name=webapp-parent --strategy=docker
+
+# or
+
+oc new-app --name=webapp-parent --strategy=docker --code=https://gitlab.com/hits.govind/container-build
 ```
 
 Verify the application is fine
@@ -82,11 +90,11 @@ oc get po -w
 
 Expose the service and check the application
 ```bash
-oc expose svc/webapp-parent-container-builds.apps.crc.testing
+oc expose svc/webapp-parent
 
 oc get route
 
-curl http://webapp-parent
+curl http://webapp-parent-container-build.apps-crc.testing
 ```
 
 
@@ -96,7 +104,12 @@ curl http://webapp-parent
 
 Get the image path for the parent image
 ```bash
-oc get images | grep webapp-parent
+oc get istag
+
+# Expected Output
+
+# NAME                   IMAGE REFERENCE                                                                                                                                      UPDATED
+# webapp-parent:latest   image-registry.openshift-image-registry.svc:5000/container-build/webapp-parent@sha256:f8c4bf0cfc031d45b635908a157ad164dcdea22b3f644c82547e07ab769d5015   3 minutes ago
 ```
 Modify the Dockerfile for the child-app
 ```bash
@@ -108,6 +121,8 @@ Build the child app
 oc new-build --name=webapp-child --strategy=docker --binary=true
 
 oc start-build webapp-child --from-dir=. --follow
+
+oc get bc
 ```
 
 Create the child app
@@ -125,6 +140,7 @@ Expose the service and curl the route
 oc expose svc/webapp-child
 
 curl http://webapp-child-container-builds.apps.crc.testing
+```
 ---
 
 ### Step 8: Deploy the Built Image
