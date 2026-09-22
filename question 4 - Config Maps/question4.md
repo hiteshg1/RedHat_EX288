@@ -8,7 +8,7 @@ Using the `docker.io/openshift/hello-openshift` image, deploy an application tha
 - The application is named: **phosphoric**
 - The application looks for a key named: **RESPONSE**
 - The configuration is stored in a ConfigMap named: **sedicen**
-- Once deployed, the application is running and available at `http://phosphoric-acid.apps.ocp4.example.com` and displays the following text:
+- Once deployed, the application is running and available at `http://phosphoric-acid..apps-crc.testing` and displays the following text:
 ```
   If you can see this your configmap works 
 ```

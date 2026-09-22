@@ -9,8 +9,7 @@ oc new-project acid
 
 ### Step 2: Deploy Application from Container Image
 ```bash
-oc new-app --name=phosphoric \
-  --image=openshift/hello-openshift:latest
+oc new-app --name=phosphoric --image=docker.io/openshift/hello-openshift
 ```
 
 ---

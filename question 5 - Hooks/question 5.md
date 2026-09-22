@@ -6,9 +6,9 @@ A Python 3 application named **blog** has been deployed for you in a project nam
 
 The application includes a script named: **mailer.py**
 
-Customize the application such that the following statements are true:
+Customise the application such that the following statements are true:
 
-- The application is running and available at `http://blog-octane.apps.ocp4.example.com`
+- The application is running and available at `http://blog-octane.apps-crc.testing`
 - After a build finishes, the above-mentioned script is automatically executed
 - The most recent build of the application succeeded and triggered the script to run
 - Future rebuilds of the application will trigger the script to run
@@ -158,16 +158,25 @@ blog/
 oc new-project octane
 
 # Deploy the blog application
-oc new-app --name=blog --strategy=source https://git.ocp4.example.com/developer/blog.git#master
+oc new-app --code=https://gitlab.com/hits.govind/blog.git --name=blog --strategy=source
 
 # Watch the build
-oc logs -f bc/blog
+oc logs -f bc/blog --follow
 
 # Wait for deployment
 oc get pods
 
 # Expose the service
 oc expose svc/blog
+```
+
+**Verify the the buildconfig has no postCommits:**
+```bash
+oc get bc/blog -o yaml | grep -inA1 postcommit
+
+# Expected Output
+# 23:  postCommit: {}
+# 24-  resources: {}
 ```
 
 **Verify the application is running:**

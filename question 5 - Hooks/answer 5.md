@@ -1,145 +1,67 @@
-## Solution (Timed Exercise - 10 minutes)
+# Answer 5
 
-### Step 1: Switch to the octane Project
+## Solution
+
 ```bash
 oc project octane
-```
 
----
+# Record the main branch SHA before making changes.
+git ls-remote https://gitlab.com/hits.govind/blog.git refs/heads/main
 
-### Step 2: Identify the Python Path in the Builder Image
+# Add a post-commit hook for the buildconfig for the mailer.py script
+oc set build-hook bc/blog --post-commit --script='python3 mailer.py'
 
-The post-commit hook needs the correct Python path. Check which Python is available:
-```bash
-# Start a test build and check logs
-oc start-build blog
+# Start the build
+oc start-build bc/blog
 
-# Or check the builder image
-oc get bc/blog -o yaml | grep "image:"
-```
-
-**For Python 3.9 S2I images, Python is typically at:**
-- `/opt/app-root/bin/python3`
-- `/usr/bin/python3`
-
----
-
-### Step 3: Set the Post-Commit Build Hook
-**Use --script:**
-```bash
-oc set build-hook bc/blog \
-  --post-commit \
-  --script="python3 mailer.py"
-```
-**Or path `/opt/app-root/bin/python3`:**
-```bash
-oc set build-hook bc/blog \
-  --post-commit \
-  --command -- /opt/app-root/bin/python3 mailer.py
-```
-
-**Alternative if `/opt/app-root/bin/python3` doesn't work:**
-```bash
-oc set build-hook bc/blog \
-  --post-commit \
-  --command -- python3 mailer.py
-```
-
----
-
-### Step 4: Verify the Post-Commit Hook was Created
-```bash
-oc describe bc/blog | grep -A 5 "Post Commit"
-```
-
-**Expected output:**
-```
-Post Commit:
-  Command:
-    /opt/app-root/bin/python3
-    mailer.py
-```
-
-**Or:**
-```bash
-oc get bc/blog -o yaml | grep -A 10 postCommit
-```
-
----
-
-### Step 5: Trigger a New Build to Test the Hook
-```bash
-oc start-build blog --follow
-```
-
-**Watch for the mailer.py execution in the logs:**
-```
-Post Commit Hook execution output:
-Email sent to capnhook user
-Subject: Build blog-2 completed
-Return code: 0
-mailer.py script executed successfully
-```
-
-**Note:** You may see warnings like "network unreachable" - these can be safely ignored as mentioned in the question.
-
----
-
-### Step 6: Verify Build Completed Successfully
-```bash
-oc get builds
-```
-
-**Expected output:**
-```
-NAME      TYPE     FROM          STATUS     STARTED          DURATION
-blog-1    Source   Git@master    Complete   10 minutes ago   2m30s
-blog-2    Source   Git@master    Complete   2 minutes ago    2m15s
-```
-
----
-
-### Step 7: Check Application is Still Running
-```bash
-oc get pods
-
-curl http://blog-octane.apps.ocp4.example.com
-```
-
----
-
-### Step 8: Verify Email was Sent 
-
-```
-In the logs of the build you should see that it ran the script 
-```
-
----
-
-### Step 9: Verify Future Builds Will Trigger the Script
-```bash
-# Trigger another build
-oc start-build blog
-
-# Check that it also executes mailer.py
+# Monitor the build and look out for the following message "mailer.py script executed successfully"
 oc logs -f bc/blog
-
 ```
 
----
+Keep the same terminal for verification. `BUILD` captures the actual build name. All changes are to OpenShift configuration; no source edit or Git push is needed.
 
-## Success Criteria
+## Verification
 
-- Project `octane` exists
-- Application `blog` is running
-- Route `blog-octane.apps.ocp4.example.com` is accessible
-- Post-commit build hook is set on BuildConfig `blog`
-- Most recent build (blog-2 or later) completed successfully
-- mailer.py script executed after the build
-- Future builds will trigger the post-commit hook
-- Original Git repository was NOT modified
+```bash
+# Verify there is a post-commit script on the buildconfig
+oc get bc/blog -o yaml | grep -inA2 postcommit
 
----
+# Expected Output
+23:  postCommit:
+24-    script: python3 mailer.py
+25-  resources: {}
+
+oc rollout status deployment/blog
+# Expected output
+deployment "blog" successfully rolled out
+
+# Check if the service is still reachable
+oc expose svc/blog
+
+oc get route
+
+curl http://blog-octane.apps-crc.testing
+```
+
+## Confirm:
+
+- The followed build log contains `mailer.py script executed successfully`.
+- The newest `blog` build is `Complete`. A mail warning is acceptable only when the script ran and the build completed.
+- The BuildConfig still contains `python3 mailer.py`, which applies to future builds.
+- The Deployment is available and HTTP returns the **Blog Application** page.
+- The Git SHA matches the value recorded before the solution. This checks the branch tip, assuming no concurrent source changes.
+
+## Troubleshooting
+
+| Problem | Check / fix |
+| --- | --- |
+| Python or script not found | Run `oc exec deployment/blog -- sh -c 'command -v python3; pwd; ls -l mailer.py'`. Correct the hook to use the verified interpreter or script path; do not change Git. |
+| Build fails or script output is missing | Run `oc logs "$BUILD"` and `oc describe "$BUILD"`. Check its hook configuration and failure reason. Do not hide errors with `|| true`. |
+| Route does not respond | Run `oc describe route/blog`, `oc get endpointslices -l kubernetes.io/service-name=blog`, and `oc logs deployment/blog`. Check CRC DNS, ready endpoints, and port 8080. |
+
+## Key takeaway
+
+Configure the hook on the BuildConfig, then prove that a new build ran it and completed successfully. Script output alone does not prove email delivery or build success.
 
 ## Key Commands Reference
 ```bash
@@ -168,116 +90,3 @@ oc get builds
 oc set build-hook bc/<name> --post-commit --remove
 
 ```
-
----
-
-## Understanding Build Hooks
-
-### What are Build Hooks?
-
-Build hooks allow you to run commands at specific points in the build process:
-
-- **Post-commit hook**: Runs AFTER the build completes successfully
-- Useful for: notifications, testing, artifact uploads, cleanup
-
-### Hook Types:
-
-1. **Command style** (array of strings):
-```bash
-oc set build-hook bc/blog --post-commit --command -- python3 mailer.py
-```
-
-2. **Script style** (single shell command):
-```bash
-oc set build-hook bc/blog --post-commit --script="python3 mailer.py"
-```
-
-### When to Use Build Hooks:
-
-- Send notifications after successful builds
-- Run tests on the built image
-- Upload artifacts to external storage
-- Tag images in a registry
-- Trigger downstream builds
-
----
-
-## Common Issues and Troubleshooting
-
-| Issue | Symptom | Fix |
-|-------|---------|-----|
-| **Hook doesn't execute** | No script output in logs | Verify hook is set: `oc describe bc/blog` |
-| **Wrong Python path** | Command not found error | Use `/opt/app-root/bin/python3` or `python3` |
-| **Script not executable** | Permission denied | Ensure `chmod +x mailer.py` before commit |
-| **Build fails** | Build doesn't complete | Check build logs: `oc logs -f bc/blog` |
-| **Hook removed accidentally** | No longer executing | Re-apply: `oc set build-hook bc/blog --post-commit --script="python3 mailer.py"` |
-
-**If post-commit hook doesn't run:**
-```bash
-# Check if hook exists
-oc get bc/blog -o yaml | grep -A 10 postCommit
-
-# Verify script is in the repo
-oc start-build blog
-oc logs blog-X-build | grep mailer
-
-# Check Python path
-oc rsh <build-pod> which python3
-
-# Re-apply hook
-oc set build-hook bc/blog --post-commit --script="python3 mailer.py"
-```
-
----
-
-## Build Hook Script Best Practices
-
-### 1. Use Environment Variables
-
-OpenShift provides useful variables in build hooks:
-```bash
-OPENSHIFT_BUILD_NAME       # e.g., "blog-2"
-OPENSHIFT_BUILD_NAMESPACE  # e.g., "octane"
-OPENSHIFT_BUILD_SOURCE     # Git URL
-OPENSHIFT_BUILD_COMMIT     # Git commit SHA
-```
-
-### 2. Handle Errors Gracefully
-```python
-try:
-    # Your code
-except Exception as e:
-    print(f"Error: {e}")
-    # Don't fail the build
-```
-
-### 3. Keep Scripts Short
-
-- Long-running hooks delay deployments
-- For complex tasks, trigger external jobs instead
-
----
-
-## Additional Practice
-
-**Try these variations:**
-
-### 1. Add Multiple Commands in Hook
-```bash
-oc set build-hook bc/blog --post-commit --script="python3 mailer.py && echo 'Done'"
-```
-
-### 2. Remove Build Hook
-```bash
-oc set build-hook bc/blog --post-commit --remove
-```
-
----
-
-## Cleanup (After Exercise)
-```bash
-oc delete project octane
-cd ~
-rm -rf blog
-```
----
