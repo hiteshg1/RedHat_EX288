@@ -109,7 +109,7 @@ Edit the templates/deployment.yaml template to make the data import configuratio
 secretKeyRef:
   key: database-password
   name: {{ .Values.redis.database_service_name }}
-  {{- if .Values.quotes.import.enabled }}
+  {{- if .Values.quotes.import.enabled }} # Add this Line
 - name: QUOTES_IMPORT_PATH
   value: /tmp/quotes/import_quotes.csv
 volumeMounts:
@@ -119,7 +119,7 @@ mountPath: /tmp/quotes
 - name: import-volume
   configMap:
 name: quotes-import-data
-  {{- end }}
+  {{- end }} # Add this line
 ```
 
 3.3 Verify that the updates to the templates/deployment.yaml file render correctly.

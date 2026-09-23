@@ -74,7 +74,7 @@ ingress:
   className: ""
   annotations: {}
   hosts:
-    - host: exam-api-exam-resource.apps.ocp4.example.com
+    - host: exam-api-exam-resource.apps-crc.testing
       paths:
         - path: /
           pathType: ImplementationSpecific
