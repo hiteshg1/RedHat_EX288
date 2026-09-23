@@ -18,7 +18,7 @@ In this lab, you are asked to create a Helm chart by using the files that the ex
 ### 1. Log in to Red Hat OpenShift.
 1.1 Log in to OpenShift as the developer user.
 
-1.2 Ensure that you use the multicontainer-review project.
+1.2 Ensure that you create and use the multicontainer-review project.
 
 
 
