@@ -87,7 +87,7 @@ git push
 oc new-project blogger-app
 
 # Deploy the blog application
-oc new-app --name=blogger --strategy=source https://gitlab.com/hits.govind/blogger.git#main
+oc new-app --code=https://gitlab.com/hits.govind/blogger.git --name=blogger --strategy=source
 
 # Watch the build
 oc logs -f bc/blogger
@@ -101,7 +101,7 @@ oc expose svc/blogger
 
 **Verify the application is running:**
 ```bash
-curl http://blog-octane.apps.ocp4.example.com
+curl http://blogger-blogger-app.apps-crc.testing
 ```
 
 **Expected output:**
