@@ -10,7 +10,7 @@ oc new-project indy
 ### Step 2: Download the Template
 ```bash
 cd ~
-wget http://fileserver-indy.apps-crc.testing/files/php-app.yaml #this is may be a link provided by redhat 
+wget http://fileserver-indy.apps-crc.testing/files/php-materials.yaml #this is may be a link provided by redhat 
 ```
 
 **If the materials server isn't available, copy from setup:**
