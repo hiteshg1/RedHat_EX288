@@ -5,7 +5,7 @@ A public PHP greeting application is available at:
 
 https://gitlab.com/hits.govind/php-greeting-app.git
 
-A template file named php-app.yaml is available from a fileserver at http://fileserver-indy.apps-crc.testing/files/php-app.yaml. 
+A template file named php-app.yaml is available from a fileserver at http://fileserver-indy.apps-crc.testing/files/php-materials.yaml. 
 
 Create an application that meets these requirements:
 
