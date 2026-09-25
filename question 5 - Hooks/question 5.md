@@ -181,7 +181,7 @@ oc get bc/blog -o yaml | grep -inA1 postcommit
 
 **Verify the application is running:**
 ```bash
-curl http://blog-octane.apps.ocp4.example.com
+curl http://blog-octane.apps-crc.testing
 ```
 
 **Expected output:**

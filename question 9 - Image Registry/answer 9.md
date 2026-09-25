@@ -7,29 +7,27 @@ oc login -u admin -p admin https://api.ocp4.example.com:6443
 
 ---
 
-### Step 2: Enable Default Route on Image Registry
+### Step 2: Edit the config for the cluster and enable the defaultRoute (must be done as admin)
 ```bash
-oc patch configs.imageregistry.operator.openshift.io/cluster \
-  --patch '{"spec":{"defaultRoute":true}}' \
-  --type=merge
-```
-or you can do it trough the ui 
+oc edit config cluster
 
-**This command:**
-- Enables the default route for the internal image registry
-- Makes the registry accessible from outside the cluster
+or 
+
+oc edit config -n openshift-image-registry
+
+# Update defaultRoute: true
+```
 
 ---
 
 ### Step 3: Verify Route Was Created
 ```bash
-oc get route -n openshift-image-registry
+oc get route default-route -n openshift-image-registry
 ```
-
-**Expected output:**
-```
-NAME            HOST/PORT                                              PATH   SERVICES         PORT    TERMINATION   WILDCARD
-default-route   default-route-openshift-image-registry.apps.ocp4...          image-registry   <all>   reencrypt     None
+```bash
+# Expected Output
+NAME            HOST/PORT                                                 PATH   SERVICES         PORT    TERMINATION   WILDCARD
+default-route   default-route-openshift-image-registry.apps-crc.testing          image-registry   <all>   reencrypt     None
 ```
 
 **Get the registry route:**
