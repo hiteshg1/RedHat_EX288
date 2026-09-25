@@ -186,7 +186,7 @@ oc new-app --template=ex288-php-mysql \
   -p NAME=php-app \
   -p HELLO_MESSAGE=Namaste \
   -p HELLO_AUDIENCE=Architects \
-  -p APPLICATION_DOMAIN=php-app-indy.apps.ocp4.example.com
+  -p APPLICATION_DOMAIN=php-app-indy.apps-crc.testing
 ```
 
 ```bash
