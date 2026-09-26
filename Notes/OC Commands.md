@@ -9,22 +9,24 @@
   - [3. Creating, Viewing and Deleting Projects](#3-creating-viewing-and-deleting-projects)
   - [4. Creating a Secret for a Docker Registry](#4-creating-a-secret-for-a-docker-registry)
   - [5. Viewing Events](#5-viewing-events)
-  - [6. OC New-App](#6-oc-new-app)
+  - [6. Creating Applications](#6-creating-applications)
   - [7. Importing an Image Stream \& Deploying the app](#7-importing-an-image-stream--deploying-the-app)
-  - [7. Triggers](#7-triggers)
-  - [8. S2I](#8-s2i)
-  - [9. Deleting an app](#9-deleting-an-app)
-  - [10. OC Explain](#10-oc-explain)
-  - [11. OC start-build and rollout](#11-oc-start-build-and-rollout)
-  - [12. OC Scale](#12-oc-scale)
-  - [13. Secrets and Config Maps](#13-secrets-and-config-maps)
-  - [14. Service Accounts](#14-service-accounts)
-  - [15. Adding Storage to Deployments](#15-adding-storage-to-deployments)
-  - [16. Types of probes](#16-types-of-probes)
-  - [17. Horizontal / Vertical Scaling](#17-horizontal--vertical-scaling)
-  - [18. Templates](#18-templates)
-  - [19. Helm Charts](#19-helm-charts)
-  - [Pipeline Strategies](#pipeline-strategies)
+  - [8. Triggers](#8-triggers)
+  - [9. S2I](#9-s2i)
+  - [10. Deleting an app](#10-deleting-an-app)
+  - [11. OC Explain](#11-oc-explain)
+  - [12. OC start-build and rollout](#12-oc-start-build-and-rollout)
+  - [13. OC Scale](#13-oc-scale)
+  - [14. Secrets and Config Maps](#14-secrets-and-config-maps)
+  - [15. Injecting Variables](#15-injecting-variables)
+  - [16. Service Accounts](#16-service-accounts)
+  - [17. Adding Storage to Deployments (incl. stateless vs stateful applications)](#17-adding-storage-to-deployments-incl-stateless-vs-stateful-applications)
+  - [18. Types of probes](#18-types-of-probes)
+  - [19. Horizontal / Vertical Scaling](#19-horizontal--vertical-scaling)
+  - [20. Templates](#20-templates)
+  - [21. Helm Charts](#21-helm-charts)
+  - [22. Kustomize CLI](#22-kustomize-cli)
+  - [23. Pipeline Strategies](#23-pipeline-strategies)
 
 
 
@@ -127,7 +129,7 @@ oc get events --field-selector type=Warning
 oc get events --sort-by='.metadata.creationTimestamp'
 ```
 ---
-## 6. OC New-App
+## 6. Creating Applications
 - [Table of Contents](#table-of-contents)
 The oc new-app command provides the following options to customize the application build:
 
@@ -214,7 +216,7 @@ oc get route
 curl http://hello-images-streams-app.apps.ocp4.example.com
 ```
 ---
-## 7. Triggers
+## 8. Triggers
 - [Table of Contents](#table-of-contents)
 ```bash
 # add GitLab webhook trigger
@@ -227,7 +229,7 @@ oc set triggers bc/name --from-gitlab --remove
 oc describe bc/name
 ```
 ---
-## 8. S2I
+## 9. S2I
 
 What is S2I?
 
@@ -260,14 +262,14 @@ oc new-app registry.example.com/ubi9/httpd-24~https://git.example.com/user/app.g
 ```
 ---
 
-## 9. Deleting an app
+## 10. Deleting an app
 - [Table of Contents](#table-of-contents)
 ```bash
 # Deleting an app with label e.g. bonjour
 oc delete all -l app=bonjourd
 ```
 
-## 10. OC Explain
+## 11. OC Explain
 - [Table of Contents](#table-of-contents)
 ```bash
 # oc explain only explains how API resources work. To list the api-resouces,
@@ -277,7 +279,7 @@ oc api-resources
 oc explain secrets
 ```
 
-## 11. OC start-build and rollout
+## 12. OC start-build and rollout
 - [Table of Contents](#table-of-contents)
 oc start-build → rebuilds the image (after git updates etc.)
 
@@ -290,7 +292,7 @@ oc rollout restart deployment/oxy
 oc rollout status deployment/oxy
 ```
 
-## 12. OC Scale
+## 13. OC Scale
 - [Table of Contents](#table-of-contents)
 The oc scale command scales the number of replicas for a given deployment
 ```bash
@@ -298,7 +300,7 @@ oc scale deployment example-deployment --replicas=3
 oc get pods
 ```
 
-## 13. Secrets and Config Maps
+## 14. Secrets and Config Maps
 - [Table of Contents](#table-of-contents)
 Depending on the sensitivity of the data, you can use the configuration map (ConfigMap) or secret (Secret) OpenShift objects to externalize the data.
 
@@ -335,7 +337,30 @@ oc extract secret/my-secret --to=/tmp/secret
 oc set env deployment my-deployment --from configmap/my-cm
 ```
 
-## 14. Service Accounts
+## 15. Injecting Variables
+```bash
+# 1. Set a literal environment variable
+oc set env deployment/myapp NAME=value
+
+# Verify 
+oc set env deployment/myapp --list
+
+# Removing an environment variable
+oc set env deployment/myapp NAME-
+
+# Injecting variables from secrets
+oc create secret generic db-secret --from-literal=DB_USER=myuser --from-literal=DB_PASSWORD=mypassword
+oc set env deployment/myapp --from=secret/db-secret
+
+# Injecting variables from configmaps
+oc create configmap app-config --from-literal=APP_MODE=production --from-literal=LOG_LEVEL=info
+oc set env deployment/myapp --from=configmap/app-config
+
+# Injecting variables during oc new-app
+oc new-app myimage -e DB_HOST=postgresql -e DB_NAME=mydb
+```
+
+## 16. Service Accounts
 - [Table of Contents](#table-of-contents)
 Service accounts provide identity for applications. This means that administrators can bind roles for role-based access control (RBAC), secrets, security context constraints (SCCs), and other objects to service accounts.
 
@@ -348,7 +373,7 @@ oc create serviceaccount my-sa
 oc set serviceaccount deployment nginx-deployment my-sa
 ```
 
-## 15. Adding Storage to Deployments
+## 17. Adding Storage to Deployments (incl. stateless vs stateful applications)
 Use the 'oc set volume' command to add, update, remove, or list volumes and volume mounts for any resource with a pod template (such as deployments, deployment configs, or replication controllers). 
 
 Easiest via the GUI
@@ -364,8 +389,45 @@ oc set volumes deploy/my-deployment \
 --claim-name my-data-claim
 ```
 
-## 16. Types of probes
+| Feature | Stateless | Stateful |
+|---|---|---|
+| **OpenShift/Kubernetes Resource** | `Deployment` | `StatefulSet` |
+| **Pod Identity** | Pods are interchangeable | Each pod has a stable identity |
+| **Pod Names** | Random/generated names, e.g. `web-7c8d9-x2abc` | Predictable names, e.g. `db-0`, `db-1`, `db-2` |
+| **Persistent Storage** | Usually not tied to a specific pod | Each pod can have its own persistent storage |
+| **PVC Usage** | May use shared or external storage | Commonly uses `volumeClaimTemplates` to create one PVC per pod |
+| **Network Identity** | Pods do not normally require stable hostnames | Pods can have stable DNS/network identities |
+| **Service Type** | Usually uses a normal `Service` | Often uses a headless Service with `clusterIP: None` |
+| **Startup Order** | Pods can start in any order | Pods normally start in sequence |
+| **Shutdown Order** | Pods can terminate in any order | Pods normally terminate in reverse order |
+| **Scaling** | Replicas can be added or removed freely | Replicas are added/removed in an ordered manner |
+| **Pod Replacement** | Replacement pod is treated as a new interchangeable instance | Replacement pod retains the same logical identity and can reuse its PVC |
+| **Best For** | Web servers, APIs, frontends, microservices | Databases, Kafka, Redis clusters, Elasticsearch |
+| **Example** | Apache / Nginx web application | PostgreSQL cluster |
+
+Example, change kind to stateful
+```bash
+apiVersion: apps/v1
+kind: StatefulSet # The alternative is kind: Deployment
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 3
+```
+
+## 18. Types of probes
 - [Table of Contents](#table-of-contents)
+
+| Name | Mandatory | Description | Default Value |
+|---|---|---|---:|
+| `initialDelaySeconds` | Yes | How long to wait after the container starts before beginning the probe | 0 |
+| `timeoutSeconds` | Yes | How long to wait for the probe before considering the probe failed | 1 |
+| `periodSeconds` | No | Probe frequency | 1 |
+| `successThreshold` | No | Minimum consecutive successes for the probe to be considered successful after it has failed | 1 |
+| `failureThreshold` | No | Minimum consecutive failures for the probe to be considered failed after it has succeeded | 3 |
+
+
 | Probe Type | Purpose | Behavior on Failure | When It Runs | Configuration Attribute |
 |------------|---------|----------------------|---------------|--------------------------|
 | **Startup Probe** | Verifies whether the application within a container has started. | OpenShift kills the container and restarts it, depending on the pod's `restartPolicy`. | Runs only once, at startup, before any other probe. Other probes (readiness/liveness) don't start until this one succeeds. | `spec.containers.startupProbe` |
@@ -373,39 +435,27 @@ oc set volumes deploy/my-deployment \
 | **Liveness Probe** | Determines whether an application running in a container is in a healthy state. | OpenShift restarts the container. | Runs periodically. | `spec.containers.livenessProbe` |
 
 ```bash
-# Readiness Probe
-# Adds an HTTP GET readiness check hitting port 8080 at /readyz. Checks every 20 seconds (--period-seconds). 
-# If it fails, OpenShift stops routing traffic to the pod until it passes again — the pod itself isn't restarted.
-oc set probe deployment/myapp \
---readiness \
---get-url=http://:8080/readyz \
---period-seconds=20
-
-# Liveness Probe TCP Check
-# Uses a TCP socket check instead of HTTP — just verifies port 3306 (commonly MySQL) accepts connections.
-# Runs every 20 seconds.
-# Each check attempt must respond within 1 second (--timeout-seconds) or it's counted as a failure.
-# If it fails enough times, the container gets restarted.
-oc set probe deployment/myapp \
---liveness \
---open-tcp=3306 \
---period-seconds=20 \
---timeout-seconds=1
-
-# Liveness Probe HTTP Check. 
-# HTTP GET check against /livez on port 8080.
-# Waits 30 seconds after container start before running the first check (--initial-delay-seconds) — gives the app time to boot.
-# Needs just 1 successful check to be considered healthy (--success-threshold).
-# Needs 3 consecutive failures (--failure-threshold) before OpenShift restarts the container.
-oc set probe deployment/myapp \
---liveness \
---get-url=http://:8080/livez \
---initial-delay-seconds=30 \
+# The following examples demonstrate using the oc set probe command with additional options:
+```bash
+# Liveness Probe example
+oc set probe deploy/expense-service \
+--liveness --get-url=http://:8080/q/health/live \
+--timeout-seconds=1 \
+--initial-delay-seconds=5 \
 --success-threshold=1 \
---failure-threshold=3
+--failure-threshold=1 \
+
+# Readiness Probe example
+oc set probe deploy/expense-service \
+--readiness --get-url=http://:8080/q/health/ready \
+--timeout-seconds=1 \
+--initial-delay-seconds=5 \
+--success-threshold=1 \
+--failure-threshold=1 \
+--period-seconds=5
 ```
 
-## 17. Horizontal / Vertical Scaling
+## 19. Horizontal / Vertical Scaling
 - [Table of Contents](#table-of-contents)
 
 Horizontal Pod Autoscaler (HPA)
@@ -428,7 +478,7 @@ Monitors actual usage over time and recommends (or automatically applies) more a
 Useful for workloads that can't easily be horizontally scaled (e.g., a single-instance database, or an app that isn't built to run multiple replicas).
 Typically requires pod restarts to apply new resource values (since resource requests are set at pod creation).
 
-## 18. Templates
+## 20. Templates
 - [Table of Contents](#table-of-contents)
 
 Templating Commands
@@ -523,26 +573,290 @@ The six things I'd make sure you can do without notes
 6. Deploy from either a file with oc new-app -f or a stored template with oc new-app --template.
 
 
-## 19. Helm Charts
+## 21. Helm Charts
 - [Table of Contents](#table-of-contents)
 
+Creating a helm chart
+```bash
+helm create my-helm-chart
+```
+which creates the following directory structure,
+```bash
+tree my-helm-chart
+my-helm-chart/
+├── Chart.yaml
+├── charts
+├── templates
+│   ├── NOTES.txt
+│   ├── _helpers.tpl
+│   ├── deployment.yaml
+│   ├── hpa.yaml
+│   ├── ingress.yaml
+│   ├── service.yaml
+│   ├── serviceaccount.yaml
+│   └── tests
+│       └── test-connection.yaml
+└── values.yaml
+```
+
+Chart.yaml - This is the main chart file that contains the chart metadata. For example, it defines the chart name, its description, and version.
+```yaml
+apiVersion: v2
+name: myapp
+description: My application
+version: 1.0.0
+appVersion: "1.0"
+```
+
+values.yaml - The values.yaml file contains variables that you can use to template your YAML files, for example:
+```yaml
+replicaCount: 1
+
+image:
+  repository: quay.io/example/myapp
+  tag: latest
+
+service:
+  port: 8080
+```
+
+templates - The templates directory holds the YAML files that you want to template and deploy. By default, Helm deploys all YAML files that are present in this directory.
+
+You must place every template expression inside of double curly brackets: {{ }}. 
+
+If an expression starts with a period and a capital letter, then it is referring to a file with the same name. In the preceding example, .Values refers to the values.yaml file, which contains the replicaCount variable.
+```yaml
+spec:
+  replicas: {{ .Values.replicaCount }}
+```
+
+templates/NOTES.txt - This file configures the text that Helm prints after you install the chart. Typically, this file contains information about the deployed application, such as the application URL, or information about how developers can interact with the application.
 
 
+If a file users multiple variables, you can set the variable scope by using the with block, e.g.,
+```bash
+{{ with .Values.image }} # Adding a block in values.yaml starting with image
+  template:
+    metadata:
+      labels:
+        deployment: example-deployment
+    spec:
+      containers:
+      - image: {{ .repository | quote }} # Since its in a block, this effective means {{ .Values.image.repository | quote }}
+        imagePullPolicy: {{ .pullPolicy | default "Always" | quote }} # Adding a default value
+        name: example-deployment
+{{ end }} # Ending the block
+```
 
-## Pipeline Strategies
+Using if/else conditions with base64 encoded strings
+```bash
+  {{ if .Values.postgres.pass }}
+  database-password: {{ .Values.postgres.pass | b64enc }}
+  {{else}}
+  database-password: {{ randAlphaNum 20 | b64enc }}
+  {{end}}
+```
+
+Concantenating values:
+```bash
+# values.yaml
+expenseServices:
+  host: expense-service
+  domain: apps.ocp4.example.com
+
+# This can be written like, which renders expense-service.apps.ocp4.example.com
+"{{ .Values.expenseService.host }}"."{{ .Values.expenseService.domain }}"
+```
+
+
+Verifying Templates
+```bash
+# Verify that the templates are syntactically correct
+helm template my-helm-chart 
+
+# Verifying a specific template is correct
+helm template -s templates/serviceaccount.yaml my-helm-chart
+```
+
+
+## 22. Kustomize CLI
 - [Table of Contents](#table-of-contents)
 
-| Strategy | Description | Best For... |
-|----------|-------------|--------------|
-| **Source-to-Image (S2I)** | Injects raw application code into a pre-configured builder image (e.g., Python, Java). OpenShift automatically handles dependencies and assembly. | Developers who want to focus purely on code without managing Dockerfiles. |
-| **Docker Build** | Mimics a standard `docker build` command. It expects a raw `Dockerfile` in the root of your source repository. | Legacy applications or teams that require strict control over image layers. |
-| **Custom** | Allows you to supply your own custom builder image that defines specific build logic or non-standard artifacts (like RPMs). | Complex, highly customized build requirements. |
-| **Pipeline** | *Note: Deprecated in newer versions in favor of OpenShift Pipelines (Tekton).* Leverages a Jenkins pipeline workflow defined in a `Jenkinsfile`. | Advanced multi-stage CI/CD orchestration. |
+The following directory structure shows an example of a Kustomize directory layout. 
 
----
+The kustomization.yaml must be in each overlay directory
+```bash
+myapp/
+├── base
+│   ├── deployment.yaml
+│   ├── kustomization.yaml # Base Kustomisation
+│   ├── secrets.yaml
+│   └── service.yaml
+└── overlays
+    └── production
+        └── kustomization.yaml # Kustomisation unique to production 
+    └── staging
+        └── kustomization.yaml # Kustomisation unique to staging
+```
+
+Each overlay kustomisation file must point to the base configuration,
+```bash
+cat overlays/production/kustomization.yaml
+resources:
+- ../../base
+```
+
+Rendering and Applying Kustomisation:
+```bash
+# You must render than apply the kustomisation. 
+
+# Render the manifest
+oc kustomize ./base
+oc kustomize ./overlays/production
+
+# Applying the manifest
+oc apply -k ./base
+oc apply -k ./overlays/production
+```
+
+Example,
+```bash
+# Directory Structure
+ansible@fedora-prd-rnd:~/kustomize-demo$ tree .
+.
+├── base
+│   ├── deployment.yaml
+│   ├── kustomization.yaml
+│   └── service.yaml
+└── overlays
+    └── production
+        └── kustomization.yaml
+
+4 directories, 4 files
+
+# Viewing base kusomtisation file
+ansible@fedora-prd-rnd:~/kustomize-demo$ cat base/kustomization.yaml 
+resources:
+  - deployment.yaml
+  - service.yaml
+
+# Viewing deployment.yaml
+ansible@fedora-prd-rnd:~/kustomize-demo$ cat base/deployment.yaml 
+# base/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: quay.io/openshift/origin-hello-openshift 
+          ports:
+            - containerPort: 8080
+
+# Viewing production kusomtisation file
+ansible@fedora-prd-rnd:~/kustomize-demo$ cat overlays/production/kustomization.yaml 
+resources:
+  - ../../base
+
+namePrefix: prod-
+
+replicas:
+  - name: web
+    count: 3
+
+labels:
+  - pairs:
+      environment: production
+
+```
 
 
+## 23. Pipeline Strategies
+- [Table of Contents](#table-of-contents)
 
+Openshift default pipelines
+```bash
+# Example, 
+ansible@fedora-prd-rnd:~/kustomize-demo$ oc get task -n openshift-pipelines
+NAME                        AGE
+argocd-task-sync-and-wait   9d
+buildah                     9d
+buildah-1-23-0              26d
+buildah-1-24-0              9d
+buildah-ns                  9d
+buildah-ns-1-23-0           26d
+buildah-ns-1-24-0           9d
+git-cli                     9d
+git-cli-1-23-0              26d
+git-cli-1-24-0              9d
+git-clone                   9d
+git-clone-1-23-0            26d
+git-clone-1-24-0            9d
+helm-upgrade-from-repo      9d
+helm-upgrade-from-source    9d
+
+# To view the yaml, 
+oc get task/buildah -n openshift-pipelines -o yaml
+
+# Using the tkn command,
+tkn -n openshift-pipelines t describe buildah
+Name:          buildah
+Namespace:     openshift-pipelines
+Description:   
+Buildah task builds source into a container image and
+then pushes it to a container registry.
+
+...omitted from output
+
+⚓ Params
+
+ NAME                 TYPE     DESCRIPTION              DEFAULT VALUE
+ ∙ IMAGE              string   Fully qualified con...   ---
+ ∙ DOCKERFILE         string   Path to the `Docker...   ./Dockerfile
+ ∙ BUILD_ARGS         array    Dockerfile build ar...   []
+ ∙ CONTEXT            string   Path to the directo...   .
+ ∙ STORAGE_DRIVER     string   Set buildah storage...   vfs
+ ∙ FORMAT             string   The format of the b...   oci
+ ∙ BUILD_EXTRA_ARGS   string   Extra parameters pa...   
+ ∙ PUSH_EXTRA_ARGS    string   Extra parameters pa...   
+ ∙ SKIP_PUSH          string   Skip pushing the im...   false
+ ∙ TLS_VERIFY         string   Sets the TLS verifi...   true
+ ∙ VERBOSE            string   Turns on verbose lo...   false
+```
+
+Sharing Data With Workspaces - 
+
+Workspaces provide common storage between tasks in a pipeline. The actual storage for workspaces can vary and each workspace in a pipeline can have a different form of backing.
+
+Tekton Commands:
+```bash
+# Starting a Tekton task
+tkn t start <task-name>
+
+# Starting  a pipeline run
+tkn p start <pipeline-name>
+
+# Adding a workspace to a pipeline run
+# The cluster creates a PVC by using the template and binds the PVC to the pipeline's app-build workspace.
+tkn p start <pipeline-name> \
+-w name=app-build,volumeClaimTemplateFile=pvc-template.yaml
+
+# Viewing Run status
+tkn pr list
+
+# Viewing pipeline run logs
+tkn pr logs my-pipeline-1
+```
 
 
 
