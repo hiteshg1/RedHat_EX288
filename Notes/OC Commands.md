@@ -1,7 +1,36 @@
 # OC Commands Reference
 ---
 
+## Table of Contents
+- [OC Commands Reference](#oc-commands-reference)
+  - [Table of Contents](#table-of-contents)
+  - [1. Logging in OpenShift Cluster](#1-logging-in-openshift-cluster)
+  - [2. Skopeo / Podman Commands](#2-skopeo--podman-commands)
+  - [3. Creating, Viewing and Deleting Projects](#3-creating-viewing-and-deleting-projects)
+  - [4. Creating a Secret for a Docker Registry](#4-creating-a-secret-for-a-docker-registry)
+  - [5. Viewing Events](#5-viewing-events)
+  - [6. OC New-App](#6-oc-new-app)
+  - [7. Importing an Image Stream \& Deploying the app](#7-importing-an-image-stream--deploying-the-app)
+  - [7. Triggers](#7-triggers)
+  - [8. S2I](#8-s2i)
+  - [9. Deleting an app](#9-deleting-an-app)
+  - [10. OC Explain](#10-oc-explain)
+  - [11. OC start-build and rollout](#11-oc-start-build-and-rollout)
+  - [12. OC Scale](#12-oc-scale)
+  - [13. Secrets and Config Maps](#13-secrets-and-config-maps)
+  - [14. Service Accounts](#14-service-accounts)
+  - [15. Adding Storage to Deployments](#15-adding-storage-to-deployments)
+  - [16. Types of probes](#16-types-of-probes)
+  - [17. Horizontal / Vertical Scaling](#17-horizontal--vertical-scaling)
+  - [18. Templates](#18-templates)
+  - [19. Helm Charts](#19-helm-charts)
+  - [Pipeline Strategies](#pipeline-strategies)
+
+
+
+
 ## 1. Logging in OpenShift Cluster
+- [Table of Contents](#table-of-contents)
 ```bash
 # Shows API for logging in via CLI
 oc whoami --show-server
@@ -14,25 +43,46 @@ oc login -u developer -p developer https://api.ocp4.example.com:6443
 oc login -u developer -p $(oc whoami -t) https://api.ocp4.example.com:6443
 ```
 
-## 2. Log in via Skopeo
+
+
+## 2. Skopeo / Podman Commands
+- [Table of Contents](#table-of-contents)
 ```bash
+# PODMAN
+podman login -u <username> -p <password>
+podman build . -t <image-name><tag> # 
+podman images
+podman push registry.example.com/project/myimage:latest
+podman rmi <IMAGE>
+podman run -d --rm --name <name> -p <host-port>:<container-port> <image><tag>
+podman run -it <IMAGE> /bin/bash
+podman stop <CONTAINER_NAME or ID>
+podman rm <CONTAINER_NAME or ID>
+podman ps -a
+
+# Skopeo
 skopeo login --username myuser --password mypass <registry>
 skopeo inspect docker://<registry:port>/user/app:tag
-
-# Example
-skopeo login registry.ocp4.example.com:8443 -u developer -p developer
-skopeo inspect docker://registry.ocp4.example.com:8443/redhattraining/hello-world-nginx
+skopeo copy docker://SOURCE_IMAGE docker://DEST_IMAGE
+skopeo delete docker://registry.example.com/project/app:old
 ```
 ---
 ## 3. Creating, Viewing and Deleting Projects
+- [Table of Contents](#table-of-contents)
 ```bash 
+# Create new project
 oc new-project <project_name>
-oc get projects
+
+# List Projects
+oc projects
+
+# Delete a project
 oc delete project <project_name>
 ```
 
 ## 4. Creating a Secret for a Docker Registry
-### Syntax of command and steps
+
+Syntax of command and steps
 
 ```bash
 # Step 1: Create the Secret
@@ -46,7 +96,7 @@ oc create secret docker-registry <secret_name> \
 oc secrets link default <pull_secret_name> --for=pull
 
 # Step 3: Verify the link
-oc get serviceaccount default -o yaml
+oc get sa default -o yaml
 
 # Step 4: Unlink a wrong credential
 oc secrets unlink default <pull_secret_name> --for=pull
@@ -65,6 +115,7 @@ oc secrets link default docker-registry-credentials --for=pull
 ```
 ---
 ## 5. Viewing Events
+- [Table of Contents](#table-of-contents)
 ```bash
 # Stream/Watch events in real time
 oc get events -w
@@ -76,12 +127,63 @@ oc get events --field-selector type=Warning
 oc get events --sort-by='.metadata.creationTimestamp'
 ```
 ---
-## 6. Importing an Image Stream & Deploying the app
+## 6. OC New-App
+- [Table of Contents](#table-of-contents)
+The oc new-app command provides the following options to customize the application build:
+
+** Supported Options ** 
+| Option	              | Description |
+| ---                   | ----        |
+| --image-stream or -i  | The image stream to be used to deploy a container image |
+|--strategy 	          | Manually specifies the containerization strategy, such as docker, or source |
+|--code 	              | The URL to a Git repository to be used as input for an S2I build |
+|--image 	              | The URL to a container image to be deployed |
+|--dry-run 	            | Set to true to show the result of the operation without performing it |
+|--context-dir 	        | The path to a directory inside of the git repository to be treated as the application root |
+
+Examples
+```bash
+# Deploy an application from an existing OpenShift ImageStream.
+oc new-app -i php:8.2 --name=myapp
+oc new-app --image-stream=python:3.11 --name=python-app
+
+# Source to Image
+oc new-app https://gitlab.com/example/myapp.git --strategy=source --name=myapp
+oc new-app https://gitlab.com/example/myrepo.git --context-dir=backend --strategy=source --name=backend
+
+# Source to Image + variables 
+# --build-env → available during the build process, -e → added to the deployed application container at runtime
+oc new-app -i nodejs:18 --code=https://gitlab.com/example/myapp.git --name=myapp \
+  --build-env NPM_MIRROR=https://registry.npmjs.org \
+  -e DB_HOST=postgresql \
+  -e DB_NAME=mydb \
+  -e DB_USER=myuser \
+  -e DB_PASSWORD=mypassword
+
+# Docker/Containerfile build
+oc new-app https://gitlab.com/example/myapp.git --strategy=docker --name=myapp
+
+# Building from Source Code (Source code → Git repository + Builder image → nodejs:18)
+oc new-app --code=https://gitlab.com/example/myapp.git -i nodejs:18 --name=myapp
+oc new-app --code=https://gitlab.com/example/myapp.git#main -i nodejs:18 --name=myapp
+
+# Deploy an existing container image directly.
+oc new-app --image=quay.io/example/myapp:latest --name=myapp
+oc new-app --image=registry.access.redhat.com/ubi9/httpd-24 --name=web
+
+# Create and apply yaml file 
+oc new-app -i nodejs:18 https://gitlab.com/example/myapp.git --dry-run=client -o yaml > app.yaml
+oc apply -f app.yaml
+```
+
+
+## 7. Importing an Image Stream & Deploying the app
+- [Table of Contents](#table-of-contents)
 ```bash
 # Step 1: Create/select the project
 oc new-project <project-name>
 
-# Step 2: Import the external image into an ImageStream
+# Step 2: Import or update an ImageStreamTag for an image that lives in an external registry
 oc import-image <imagestream-name>:<tag> --from=<external-image-url> --confirm
 
 # Step 3: Verify the ImageStream and tags
@@ -113,17 +215,22 @@ curl http://hello-images-streams-app.apps.ocp4.example.com
 ```
 ---
 ## 7. Triggers
+- [Table of Contents](#table-of-contents)
 ```bash
-# add/remove a GitLab webhook to a build configuration
+# add GitLab webhook trigger
 oc set triggers bc/name --from-gitlab
+
+# remove GitLab webhook trigger
 oc set triggers bc/name --from-gitlab --remove
 
-# To retrieve a webhook URL
+# inspect trigger configuration and webhook URLs
 oc describe bc/name
 ```
 ---
 ## 8. S2I
-### What is S2I?
+
+What is S2I?
+
 Instead of writing a Containerfile, S2I uses a builder image that already knows how to build and run a particular type of application. Examples of builder images include Node.js, Python, PHP and httpd-24.
 ```bash
 Application Source Code
@@ -154,39 +261,45 @@ oc new-app registry.example.com/ubi9/httpd-24~https://git.example.com/user/app.g
 ---
 
 ## 9. Deleting an app
+- [Table of Contents](#table-of-contents)
 ```bash
 # Deleting an app with label e.g. bonjour
 oc delete all -l app=bonjourd
 ```
 
 ## 10. OC Explain
+- [Table of Contents](#table-of-contents)
 ```bash
 # oc explain only explains how API resources work. To list the api-resouces,
 oc api-resources
 
 # Example, secrets is an api resource
 oc explain secrets
-
 ```
 
-## 11. OC Rollout
-The oc rollout command provides the cancel, pause, undo, retry, and more options for your deployments.
+## 11. OC start-build and rollout
+- [Table of Contents](#table-of-contents)
+oc start-build → rebuilds the image (after git updates etc.)
+
+oc rollout restart → recreates the pods using the current image (not necessary if the deployment has an image-chage trigger)
+
 ```bash
-oc rollout status deployment example-deployment
-oc rollout undo deployment example-deployment
-oc rollout pause deployment example-deployment
-oc rollout resume deployment example-deployment
-oc rollout --help
+# Example,
+oc start-build bc/oxy --follow
+oc rollout restart deployment/oxy
+oc rollout status deployment/oxy
 ```
 
-## 11. OC Scale
+## 12. OC Scale
+- [Table of Contents](#table-of-contents)
 The oc scale command scales the number of replicas for a given deployment
 ```bash
 oc scale deployment example-deployment --replicas=3
 oc get pods
 ```
 
-## 12. Secrets and Config Maps
+## 13. Secrets and Config Maps
+- [Table of Contents](#table-of-contents)
 Depending on the sensitivity of the data, you can use the configuration map (ConfigMap) or secret (Secret) OpenShift objects to externalize the data.
 
 Use secrets to store sensitive information, such as passwords, keys, and tokens.
@@ -222,7 +335,8 @@ oc extract secret/my-secret --to=/tmp/secret
 oc set env deployment my-deployment --from configmap/my-cm
 ```
 
-## 13. Service Accounts
+## 14. Service Accounts
+- [Table of Contents](#table-of-contents)
 Service accounts provide identity for applications. This means that administrators can bind roles for role-based access control (RBAC), secrets, security context constraints (SCCs), and other objects to service accounts.
 
 Developers then associate service accounts with pods. 
@@ -234,8 +348,10 @@ oc create serviceaccount my-sa
 oc set serviceaccount deployment nginx-deployment my-sa
 ```
 
-## 14. Adding Storage to Deployments
+## 15. Adding Storage to Deployments
 Use the 'oc set volume' command to add, update, remove, or list volumes and volume mounts for any resource with a pod template (such as deployments, deployment configs, or replication controllers). 
+
+Easiest via the GUI
 ```bash
 # The following is an example command to create and attach a PVC to an existing deployment called my-deployment:
 oc set volumes deploy/my-deployment \
@@ -248,7 +364,8 @@ oc set volumes deploy/my-deployment \
 --claim-name my-data-claim
 ```
 
-## 15. Types of probes
+## 16. Types of probes
+- [Table of Contents](#table-of-contents)
 | Probe Type | Purpose | Behavior on Failure | When It Runs | Configuration Attribute |
 |------------|---------|----------------------|---------------|--------------------------|
 | **Startup Probe** | Verifies whether the application within a container has started. | OpenShift kills the container and restarts it, depending on the pod's `restartPolicy`. | Runs only once, at startup, before any other probe. Other probes (readiness/liveness) don't start until this one succeeds. | `spec.containers.startupProbe` |
@@ -288,8 +405,10 @@ oc set probe deployment/myapp \
 --failure-threshold=3
 ```
 
-## 16. Horizontal / Vertical Scaling
-### Horizontal Pod Autoscaler (HPA)
+## 17. Horizontal / Vertical Scaling
+- [Table of Contents](#table-of-contents)
+
+Horizontal Pod Autoscaler (HPA)
 
 Scales out/in — it changes the number of pod replicas running for a deployment/replicaset/statefulset.
 
@@ -301,7 +420,7 @@ oc autoscale deployment/myapp --min=2 --max=10 --cpu-percent=70
 ```
 This keeps between 2–10 replicas of myapp, adding pods when average CPU exceeds 70%.
 
-### Vertical Pod Autoscaler (VPA)
+Vertical Pod Autoscaler (VPA)
 
 Scales up/down — it changes the resource requests/limits (CPU & memory) of individual pods, rather than the number of pods.
 
@@ -309,9 +428,10 @@ Monitors actual usage over time and recommends (or automatically applies) more a
 Useful for workloads that can't easily be horizontally scaled (e.g., a single-instance database, or an app that isn't built to run multiple replicas).
 Typically requires pod restarts to apply new resource values (since resource requests are set at pod creation).
 
-## 17. Templates
+## 18. Templates
+- [Table of Contents](#table-of-contents)
 
-### Templating Commands
+Templating Commands
 ```bash
 # List templates
 oc get templates
@@ -356,7 +476,7 @@ oc process -f template.yaml \
 oc create -f resources.yaml
 ```
 
-### YAML skeleton I'd memorize is only:
+YAML skeleton I'd memorize is only:
 ```bash
 apiVersion: template.openshift.io/v1
 kind: Template
@@ -394,7 +514,7 @@ labels:
   app: ${APP_NAME}
 ```
 
-### The six things I'd make sure you can do without notes
+The six things I'd make sure you can do without notes
 1. Recognize kind: Template.
 2. Know that resources go under objects:, not spec:.
 3. Create and reference a parameter with ${PARAMETER}.
@@ -403,14 +523,14 @@ labels:
 6. Deploy from either a file with oc new-app -f or a stored template with oc new-app --template.
 
 
-## 18. Helm Charts
+## 19. Helm Charts
+- [Table of Contents](#table-of-contents)
 
 
 
-
-<br>
 
 ## Pipeline Strategies
+- [Table of Contents](#table-of-contents)
 
 | Strategy | Description | Best For... |
 |----------|-------------|--------------|
@@ -437,455 +557,3 @@ labels:
 
 <br>
 
-## Chapter 3 Lab: Building and Publishing Container Images
-### Outcomes
-- Build a container image locally.
-- Publish a container image to a private image registry.
-- Create an image stream from a container image in a private registry.
-- Create an application using a new image stream.
-
-| Application name	        | custom-server |
-| ---                       | --- |
-| Image name	            | custom-server:1.0.0 |
-| Image registry	        | registry.ocp4.example.com:8443 |
-| Image registry namespace	| developer |
-| Registry username	        | developer |
-| Registry password	        | developer |
-| Registry email	        | developer@example.org |
-| Registry secret name	    | registry-credentials |
-
-### Containerfile
-```bash
-FROM registry.ocp4.example.com:8443/redhattraining/hello-world-nginx:latest
-USER root
-RUN sed -1 "s/nginx/OpenShift/g"/usr/share/nginx/html/index.html
-USER 1001
-```
-### Solution
-```bash
-# Step 1: Build the Container image and push to the image registry
-podman login -u developer -p developer registry.ocp4.example.com:8443
-podman build . -t registry.ocp4.example.com:8443/developer/custom-server:1.0.0
-podman images
-podman push registry.ocp4.example.com:8443/developer/custom-server:1.0.0
-
-# Step 2: Create a secret called registry-credentials
-oc login -u developer -p developer https://api.ocp4.example.com:6443
-
-oc create secret docker-registry \
-registry-credentials \
---docker-server=registry.ocp4.example.com:8443 \
---docker-username=developer \
---docker-password=developer \
---docker-email=developer@example.org
-secret/registry-credentials created
-
-oc secrets link default registry-credentials --for=pull
-
-# Step 3: Create an image stream for the custom-server:1.0.0 image
-oc import-image custom-server --confirm --from registry.ocp4.example.com:8443/developer/custom-server:1.0.0
-oc get is
-
-# Step 4: Create an OpenShift application by using the custom-server image stream
-oc new-app --name custom-server -i images-review/custom-server q
-
-# Step 5: Validate the POD is running
-oc get po -w
-oc expose svc/custom-server
-oc get route
-curl http://custom-server-images-review.ocp4.example.com
-```
----
-<br>
-
-## Guided Exercise 4.1: Managing Application Builds
-Create an application build. Build the vertx-site application from source code in Git.
-
-### Use the following parameters for the build:
-- Application name: vertx-site
-- Build environment variable: MAVEN_MIRROR_URL=http://nexus-infra.apps.ocp4.example.com/java
-- Environment variable: JAVA_APP_JAR=vertx-site-1.0.0-SNAPSHOT-fat.jar
-- Image stream: redhat-openjdk18-openshift:1.8
-- Build directory: apps/builds-applications/vertx-site
-- Source code: https://git.ocp4.example.com/developer/DO288-apps 
-
-### Syntax for new-app command
-```bash
-oc new-app --name=<app-name> \
-  --context-dir=<subdir-path> \
-  --build-env <BUILD_VAR>=<value> \
-  --env <RUNTIME_VAR>=<value> \
-  <git-repository-url>#[<branch-or-tag>]
-```
-
-```bash
-# Create the app
-oc new-app --name vertx-site \
---build-env \
-MAVEN_MIRROR_URL=http://nexus-infra.apps.ocp4.example.com/java \
---env JAVA_APP_JAR=vertx-site-1.0.0-SNAPSHOT-fat.jar \
--i redhat-openjdk18-openshift:1.8 \
---context-dir apps/builds-applications/vertx-site \
-https://git.ocp4.example.com/developer/DO288-apps
-
-oc logs -f bc/vertx-site
-oc get build
-
-# After inspecting the Maven Repository, cat ~/.m2/settings.xml you discover the URL for the build-env is wrong.
-...output omitted...
-<url>http://nexus-infra.apps.ocp4.example.com/repository/java</url>
-...output omitted...
-
-# Reset the build-env to http://nexus-infra.apps.ocp4.example.com/repository/java
-oc set env bc/vertx-site MAVEN_MIRROR_URL=http://nexus-infra.apps.ocp4.example.com/repository/java
-oc start-build vertx-site
-oc get po -w
-oc expose svc vertx-site
-oc get route
-curl vertx-site-builds-applications.apps.ocp4.example.com
-
-# If you need to fix the app and re-save the changes to GIT
-git commit -am "Modify the application version"
-git push
-oc start-build --follow vertx-site
-```
----
-<br>
-
-## Guided Exercise 4.2: Triggering Builds
-### Outcomes
-- Deploy an application by using a builder image and a source code.
-- Trigger a new build of the application when the builder image changes.
-
-Lab Details:
-| Key         | Value |
-| ---         | --- |
-| Gitlab Repo | https://git.ocp4.example.com/developer/builds-triggers|
-| Gitlab Username | developer |
-| Gitlab Password | d3v3lop3r |
-| Gitlab secret   | gitlab    |
-| Image Repo      | registry.ocp4.example.com:8443/ubi8/httpd-24 |
-
-
-```bash
-# Create gitlab secret
-oc create secret generic gitlab --from-literal=username=developer --from-literal=password=d3v3lop3r
-
-# Deploy an application from the GitLab repository builds-triggers. 
-# Set builds-triggers as the application name, and use ubi8/httpd-24 as the base image.
-IMAGE=registry.ocp4.example.com:8443
-GIT_REPO=https://git.ocp4.example.com/developer/builds-triggers
-
-oc new-app --name builds-triggers --source-secret gitlab $IMAGE~$GIT_REPO
-
-# Monitor Build and confirm its using the UBI8 httpd-24 image
-oc get pods -w
-oc rsh svc/builds-triggers cat /etc/redhat-release
-
-# Set a build trigger
-oc set triggers bc/builds-triggers
-
-# Set the Image Stream to use UBI9 image
-oc tag registry.ocp4.example.com:8443/ubi9/httpd-24:latest httpd-24:latest
-
-# Your should notice a 2nd build triggered. When you rsh into the container, it should use a UBI9 image
-oc get builds
-
-# Confirming Triggers have been set, look for triggers
-oc get bc/builds-triggers -o yaml | grep trigger
-```
----
-<br>
-
-## Chapter 4 Lab: Managing Red Hat OpenShift Builds
-### Outcomes
-- Create, start, and rebuild application builds in Red Hat OpenShift.
-- Debug and fix failed OpenShift builds.
-
-### Instructions
-
-Your task is to deploy the expense-service application to Red Hat OpenShift. Because your OpenShift cluster does not contain an S2I base image that is compatible with the application, your colleague provided you with the source code for the application and a Dockerfile file.
-
-Use the following information to deploy the application into the OpenShift cluster.
-| Description	| Value |
-| ---	| --- |
-| Application name	| expense-service |
-| Source code location	| https://git.ocp4.example.com/developer/DO288-apps |
-| Source code directory	| apps/builds-review/expense-service |
-| Build strategy	| Docker |
-| Application URL	| http://expense-service-builds-review.apps.ocp4.example.com |
-| GitLab username	| developer |
-| GitLab password	| d3v3lop3r |
-
-### Dockerfile
-```bash
-Dockerfile
-FROM registry.ocp4.example.com:8443/redhattraining/ocpdev-ubi8-openjdk-17-base:1.16
-
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-COPY src .
-RUN mvn clean package
-
-CMD ["java", "-jar", "target/expense-service-1.0.0-SNAPSHOT-runner.jar"]
-```
-### Step by Step Guide
-```bash
-# Log in to OpenShift.
-oc login -u developer -p developer https://api.ocp4.example.com:6443
-oc project builds-review
-
-# Create the application in OpenShift, which includes creating a BuildConfig. The app has a bug.
-oc new-app --name expense-service --strategy Docker \
---context-dir apps/builds-review/expense-service \
-https://git.ocp4.example.com/developer/DO288-apps
-
-oc logs deploy/expense-service
-# Error: Unable to access jarfile target/expense-service-1.0.0-SNAPSHOT-runner.jar
-
-# You can launch a debug pod and verify if target/expense-service-1.0.0-SNAPSHOT-runner.jar exist
-oc debug deploy/expense-service
-$ ls target/
-
-# There is no expense-service-1.0.0-SNAPSHOT-runner.jar file in the target folder. Maven will need to recompile the application
-# mvn clean package, builds the JAR/WAR file and leaves it exclusively inside your local project's /target folder.
-mvn clean package
-
-# Edit the Dockerfile, amend COPY src . to COPY src src and push back to git
-git commit -am "Fixed COPY src src in Dockerfile"
-git push
-
-# Re-depoly the application
-oc start-build bc/expense-service --follow
-
-# Validation
-oc get pods
-oc expose svc/expense-service
-oc get route
-curl -s expense-service-builds-review.apps.ocp4.example.com/expenses | jq
-```
----
-<br>
-
-## Exersise 5.1:  Selecting the Appropriate Deployment Strategy
-### Outcomes
-- Observe the behavior of both the rolling and recreate deployment strategies.
-
-### Application Spec
-| Name | Value |
-| --- | --- |
-| Application Name      | users-db |
-| MYSQL_USER: developer | Value |
-| MYSQL_PASSWORD        | redhat |
-| MYSQL_DATABASE        | users |
-| Repository URL        | https://git.ocp4.example.com/developer/DO288-apps |
-| Repository context    | apps/deployments-strategy/users-db |
-
-```bash
-# Use the oc new-app command with the -o yaml option to create a manifest for the app
-oc new-app --name users-db \
--e MYSQL_USER=developer \
--e MYSQL_PASSWORD=redhat \
--e MYSQL_DATABASE=users \
-https://git.ocp4.example.com/developer/DO288-apps \
---context-dir=apps/deployments-strategy/users-db \
--o yaml > application.yaml
-
-# Create the application in the cluster by running the oc apply command with the -f option to provide the application.yaml file.
-oc apply -f application.yaml
-
-# Scale the deployment to have five replicas of the database.
-oc scale --replicas=5 deploy/users-db
-
-# Observer the strategy
-[student@workstation users-db]$ oc get -o yaml deploy/users-db
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  ...output omitted...
-spec:
-  ...output omitted...
-  strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
-    type: RollingUpdate
-  template:
-    metadata:
-      annotations:
-...output omitted...
-
-# Change the deployment strategy to Recreate by editing the application.yaml manifest.
-- apiVersion: apps/v1
-  kind: Deployment
-  metadata:
-...output omitted...
-    name: users-db
-  spec:
-    replicas: 5
-    selector:
-      matchLabels:
-        deployment: users-db
-    strategy:
-      type: Recreate
-      recreateParams:
-        post:
-          failurePolicy: Abort
-          execNewPod:
-            containerName: users-db
-            command: ["/post-deploy/import.sh"]
-    template:
-      metadata:
-...output omitted...
-
-# Run the oc apply command to update the deployment resource.
-oc apply -f application.yaml
-
-# Manually rollout new pods. 
-oc rollout restart deploy/users-db
-```
----
-<br>
-
-## Exersise 5.2:  Managing Application Deployments
-### Outcomes
-- Create deployments.
-- Debug failing deployments.
-- Configure application deployments by using the oc CLI.
-
-```bash
-oc login -u developer -p developer https://api.ocp4.example.com:6443
-oc project deployments-applications
-
-# Verify the project has secrets configured
-[student@workstation~l$ oc get secret
-NAME                      TYPE                        DATA              AGE
-builder-dockerfg-flfre    kubernetes.io/dockercfg     1                 27m
-default-dockercfg-9vs7c   kubernetes.io/dockercfg     1                 27m
-deployer-dockercfg-mztma  kubernetes.io/dockercfg     1                 27m
-pipeline-dockercfg-qr7m2  kubernetes.io/dockercfg     1                 27m
-postgresqu                Opaque                      3                 27m
-
-# Verify that the project contains the postgresql secret. This secret contains the login information for the deployed PostgreSQL database.
-[student@workstation expense-servicel$ oc describe secret postgresql
-...output omitted...
-Data
-====
-database-name:      8 bytes
-database-password:  16 bytes
-database-user:      7 bytes
-
-# View the secrets postgresql
-[student@workstation expense-servicel$ oc get secret postgresql -o yaml
-database-name: c2FtcGx1ZGI=
-database-password: WTRvWFBnV1hneG5PMERXcA==
-database-user: dXNlclQ×RA==
-
-# View the base64 decoded secret details
-echo -n 'c2FtcGxlZGI=' | base64 --decode; echo
-sampledb
-
-echo -n 'WTRVWFBnVIhneGSPMERXCA==' | base64 --decode; echo
-Y40XPgWXgxn00DWp
-
-echo -n 'dXlclQxRA==' | base64 --decode; echo
-userT1D
-
-# When you deploy the application it will fail. 
-oc new-app --name=expense-service --image=registry.ocp4.example.com:8443/redhattraining/ocpdev-expense-service:4.18
-oc get pod
-
-# View the logs 
-[student@workstation ~]$ oc logs deployment/expense-service | head
-...output omitted...
-2023-07-25 13:13:25,066 WARN  [io.agr.pool] (agroal-11) Datasource '<default>': FATAL: password authentication failed for user "userNWW"
-2023-07-25 13:13:25,069 WARN  [org.hib.eng.jdb.env.int.JdbcEnvironmentInitiator] (JPA Startup Thread) HHH000342: Could not obtain connection to query metadata: org.postgresql.util.PSQLException: FATAL: password authentication failed for user "userNWW"
-...output omitted...
-
-# Explore the application source code to determine the database configuration. View src/main/resources/application.properties. 
-# Notice the details don't match the configured secret
-...output omitted...
-quarkus.datasource.username=${DATABASE_USER:userNWW}
-quarkus.datasource.password=${DATABASE_PASSWORD:sr5ps4agHuDlTa5k}
-quarkus.datasource.jdbc.url=jdbc:postgresql://postgresql:5432/${DATABASE_NAME:sampledb}
-
-# Overwrite the application properties by using environment variables.
-oc set env deploy/expense-service --from=secret/postgresql
-
-# The application DB authentication should match the secret and the PODS should be running
-```
----
-<br>
-
-
-## Exersise 5.3: Deploying Stateful Applications
-### Outcomes
-- Create and attach a persistent volume claim to a deployment.
-- Attach a configuration map as ephemeral storage to run a database initialization script.
-- Create a stateful set as an alternative way of running a stateful application.
-
-```bash
-# Verify that the database server is running. 
-[student@workstation ~]$ oc get deploy
-NAME       READY   UP-TO-DATE   AVAILABLE   AGE
-mysql-db   1/1     1            1           1m
-
-# Attach a persistent volume claim (PVC) with the details below, 
-# Name:nfs-volume-storage
-# Mounted Path:/var/lib/mysql
-# Claim Mode:rwo
-# Claim Size:1Gi
-# Claim Name:mysql-db-pvc
-
-oc set volumes deploy/mysql-db \
---add \
---name nfs-volume-storage \
---type pvc \
---claim-mode rwo \
---claim-size 1Gi \
---mount-path /var/lib/mysql \
---claim-name mysql-db-pvc
-
-# Verify that the PVC is attached to the database deployment.
-oc get deploy/mysql-db -o yaml | grep -iA 5 volumemounts
-"mountPath": "/var/lib/mysql",
-"name": "nfs-volume-storage"
-
-# Use a configuration map as an ephemeral volume to add initialization data to the database.
-oc create cm init-db-cm --from-file init-db.sql
-
-# Add the configuration map as a volume called init-db-volume to the deployment. Specify the volume type as configmap and set the /tmp/init-db directory as the mount path.
-oc set volumes deploy/mysql-db \
---add \
---name init-db-volume \
---configmap-name init-db-cm \
---type configmap \
---mount-path /tmp/init-db
-
-# Verify that the PVC is attached to the database deployment.
-oc get deploy/mysql-db -o yaml | grep -iA 5 volumemounts
-"mountPath": "/var/lib/mysql",
-"name": "nfs-volume-storage"
-"mountPath": "/tmp/init-db",
-"name": "init-db-volume"
-
-# Use the mysql client to execute the database script in the /tmp/init-db volume. Ignore the warning message.
-oc rsh deploy/mysql-db mysql -udbuser -pdbuser items -e "source /tmp/init-db/init-db.sql"
-
-# Verify that the table is populated.
-oc rsh deploy/mysql-db mysql -udbuser -pdbuser items -e "select * from Item;"
-...output omitted...
-+----+-------------------+------------+
-| id | description       | done       |
-+----+-------------------+------------+
-|  1 | Pick up newspaper | 0x00       |
-|  2 | Buy groceries     | 0x01       |
-+----+-------------------+------------+
-
-# Scale up the mysql-db deployment to 3 replicas
-oc scale --replicas 3 deploy/mysql-db
-
-# Observe that still only one PVC exists.
-oc get pvc
-```
