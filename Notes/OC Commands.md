@@ -809,7 +809,8 @@ helm-upgrade-from-source    9d
 oc get task/buildah -n openshift-pipelines -o yaml
 
 # Using the tkn command,
-tkn -n openshift-pipelines t describe buildah
+tkn -n openshift-pipelines task describe buildah
+
 Name:          buildah
 Namespace:     openshift-pipelines
 Description:   
